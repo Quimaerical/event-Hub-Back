@@ -3,6 +3,7 @@ package controllers
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"event-hub/models"
 	"github.com/gin-gonic/gin"
