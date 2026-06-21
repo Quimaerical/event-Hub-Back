@@ -34,7 +34,7 @@ Event Hub es un ecosistema de software diseñado bajo un patrón arquitectónico
   - **Cliente Web:** HTML5 / Plantillas Nativas de Go (`html/template`) con estilo Glassmorphism y Tailwind CSS.
   - **Cliente Móvil:** Dart (Flutter Framework) para dispositivos Android e iOS.
 - **APIs de Terceros:** Google Cloud Console (OAuth 2.0, Google Calendar API), Google Gemini API SDK.
-- **Diseñador Principal:** Sebastian Piñango
+- **Diseñadores Principales:** Sebastian Piñango, Edgar Gutiérrez
 
 ---
 
@@ -294,5 +294,5 @@ Para el correcto mantenimiento del repositorio, se definen plantillas estrictas 
 ---
 
 ## 12. Créditos
-- **Diseñador y Desarrollador Principal:** Sebastian Piñango.
+- **Diseñadores y Desarrolladores Principales:** Sebastian Piñango, Edgar Gutiérrez.
 - **Tecnologías:** Golang, Gin Framework, pgxpool, Flutter, Google Cloud Platform, Gemini API.
