@@ -1,0 +1,15 @@
+{{ define "partials/category_filter.html" }}
+<div class="flex flex-wrap gap-2 justify-center py-6">
+    <!-- 'All' Pill -->
+    <a href="/?search={{ .searchQuery }}" class="px-4 py-2 text-xs font-semibold rounded-full border transition duration-200 {{ if eq .selectedCategoryID 0 }} bg-brand-600 border-brand-500 text-white shadow-lg shadow-brand-500/20 {{ else }} bg-slate-900/60 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700 {{ end }}">
+        Todas
+    </a>
+
+    <!-- Dynamic Category Pills -->
+    {{ range .categorias }}
+        <a href="/?category={{ .ID }}&search={{ $.searchQuery }}" class="px-4 py-2 text-xs font-semibold rounded-full border transition duration-200 {{ if eq $.selectedCategoryID .ID }} bg-brand-600 border-brand-500 text-white shadow-lg shadow-brand-500/20 {{ else }} bg-slate-900/60 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700 {{ end }}">
+            {{ .Nombre }}
+        </a>
+    {{ end }}
+</div>
+{{ end }}

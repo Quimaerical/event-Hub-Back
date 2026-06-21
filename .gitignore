@@ -1,0 +1,21 @@
+# Binarios compilados
+dist/
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+event-hub  # Reemplaza con el nombre de tu ejecutable final
+
+# Variables de entorno y credenciales
+.env
+
+# Archivos de configuración de IDEs
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

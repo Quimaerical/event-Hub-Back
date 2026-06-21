@@ -1,0 +1,95 @@
+{{ define "dashboard/index.html" }}
+{{ template "layouts/base.html" . }}
+
+{{ define "title" }}Cartelera de Eventos - Event Hub{{ end }}
+
+{{ define "content" }}
+<div class="space-y-8">
+    <!-- Hero / Header -->
+    <div class="text-center max-w-2xl mx-auto space-y-4">
+        <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">Descubre Eventos del Hub</h1>
+        <p class="text-slate-400 text-base sm:text-lg">Explora conferencias de tecnología, conciertos en vivo, talleres de negocios y galerías de arte organizadas por la comunidad.</p>
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="space-y-4">
+        {{ template "partials/search_bar.html" . }}
+        {{ template "partials/category_filter.html" . }}
+    </div>
+
+    <!-- Grid of Events -->
+    <div>
+        {{ if .eventos }}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {{ range .eventos }}
+                    <article class="glass-card rounded-2xl overflow-hidden flex flex-col h-full p-6 space-y-4">
+                        <div class="flex-grow space-y-3">
+                            <!-- Categories Badge -->
+                            <div class="flex flex-wrap gap-1.5">
+                                {{ range .Categorias }}
+                                    <span class="px-2.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase bg-brand-900/40 border border-brand-500/20 text-brand-100 rounded-md">
+                                        {{ .Nombre }}
+                                    </span>
+                                {{ end }}
+                            </div>
+                            
+                            <!-- Title -->
+                            <h2 class="text-xl font-bold text-white line-clamp-2 hover:text-brand-500 transition duration-150">
+                                {{ .Titulo }}
+                            </h2>
+                            
+                            <!-- Description -->
+                            <p class="text-slate-400 text-sm line-clamp-3 leading-relaxed">
+                                {{ .Descripcion }}
+                            </p>
+                        </div>
+
+                        <!-- Event Details -->
+                        <div class="pt-4 border-t border-slate-900 space-y-2 text-xs text-slate-400">
+                            <!-- Date & Time -->
+                            <div class="flex items-center space-x-2">
+                                <svg class="h-4 w-4 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span>{{ .Fecha.Format "02 Jan 2006, 15:04" }}</span>
+                            </div>
+                            
+                            <!-- Location -->
+                            <div class="flex items-center space-x-2">
+                                <svg class="h-4 w-4 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <span class="truncate">{{ .Ubicacion }}</span>
+                            </div>
+
+                            <!-- Organizer Info -->
+                            <div class="flex items-center space-x-2 pt-1">
+                                <div class="h-5 w-5 rounded-full bg-brand-600/20 border border-brand-500/30 flex items-center justify-center text-[10px] font-bold text-brand-100 uppercase">
+                                    o
+                                </div>
+                                <span class="truncate">Organizado por <span class="text-slate-300 font-medium">{{ .CreadorNombre }}</span></span>
+                            </div>
+                        </div>
+                    </article>
+                {{ end }}
+            </div>
+        {{ else }}
+            <!-- Empty State -->
+            <div class="text-center py-16 px-4 bg-slate-900/30 border border-slate-900 rounded-2xl">
+                <svg class="mx-auto h-12 w-12 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <h3 class="mt-4 text-lg font-bold text-slate-200">No se encontraron eventos</h3>
+                <p class="mt-2 text-sm text-slate-500">Prueba modificando la búsqueda o el filtro de categorías.</p>
+                {{ if .userID }}
+                    <a href="/eventos/crear" class="mt-6 inline-flex items-center px-4 py-2 text-sm font-semibold bg-brand-600 hover:bg-brand-500 text-white rounded-lg transition shadow-md shadow-brand-500/10">
+                        Crear Primer Evento
+                    </a>
+                {{ end }}
+            </div>
+        {{ end }}
+    </div>
+</div>
+{{ end }}
+{{ end }}

@@ -1,0 +1,33 @@
+{{ define "partials/navbar.html" }}
+<header class="sticky top-0 z-40 glass-panel border-b border-slate-900">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <!-- Brand Logo -->
+            <div class="flex items-center">
+                <a href="/" class="flex items-center space-x-2">
+                    <span class="text-2xl font-bold bg-gradient-to-r from-brand-500 to-indigo-400 bg-clip-text text-transparent">EventHub</span>
+                </a>
+            </div>
+
+            <!-- Center Nav Links -->
+            <nav class="hidden md:flex space-x-8 text-sm font-medium">
+                <a href="/" class="text-slate-200 hover:text-white transition">Cartelera</a>
+                {{ if .userID }}
+                    <a href="/eventos/crear" class="text-slate-400 hover:text-white transition">Crear Evento</a>
+                {{ end }}
+            </nav>
+
+            <!-- Right Actions -->
+            <div class="flex items-center space-x-4">
+                {{ if .userID }}
+                    <span class="text-slate-400 text-sm hidden sm:inline">Hola, <span class="text-brand-100 font-medium">{{ .email }}</span></span>
+                    <a href="/auth/logout" class="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition border border-slate-700">Salir</a>
+                {{ else }}
+                    <a href="/login" class="text-slate-300 hover:text-white text-sm font-medium transition">Ingresar</a>
+                    <a href="/register" class="px-4 py-2 text-xs font-semibold bg-brand-600 hover:bg-brand-500 text-white rounded-lg transition shadow-md shadow-brand-500/10">Registrarse</a>
+                {{ end }}
+            </div>
+        </div>
+    </div>
+</header>
+{{ end }}

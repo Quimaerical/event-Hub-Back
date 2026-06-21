@@ -1,0 +1,57 @@
+{{ define "auth/login.html" }}
+{{ template "layouts/base.html" . }}
+
+{{ define "title" }}Iniciar Sesión - Event Hub{{ end }}
+
+{{ define "content" }}
+<div class="max-w-md w-full mx-auto mt-10">
+    <div class="glass-panel p-8 rounded-3xl shadow-xl space-y-6">
+        <div class="text-center space-y-2">
+            <h1 class="text-3xl font-bold text-white">Bienvenido de nuevo</h1>
+            <p class="text-slate-400 text-sm">Ingresa a tu cuenta de Event Hub</p>
+        </div>
+
+        {{ if .error }}
+            <div class="bg-red-900/30 border border-red-500/40 text-red-200 px-4 py-3 rounded-lg text-sm">
+                {{ .error }}
+            </div>
+        {{ end }}
+
+        <form action="/login" method="POST" class="space-y-4">
+            <div>
+                <label for="email" class="block text-sm font-medium text-slate-300">Correo Electrónico</label>
+                <input type="email" id="email" name="email" required class="mt-1 block w-full bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition">
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-slate-300">Contraseña</label>
+                <input type="password" id="password" name="password" required class="mt-1 block w-full bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition">
+            </div>
+
+            <button type="submit" class="w-full py-3 px-4 bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-xl transition shadow-lg shadow-brand-500/20 text-sm">
+                Iniciar Sesión
+            </button>
+        </form>
+
+        <div class="relative flex py-2 items-center">
+            <div class="flex-grow border-t border-slate-900"></div>
+            <span class="flex-shrink mx-4 text-slate-500 text-xs font-semibold uppercase tracking-wider">O acceder con</span>
+            <div class="flex-grow border-t border-slate-900"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <a href="/auth/google" class="flex items-center justify-center py-2.5 px-4 bg-slate-900 border border-slate-800 rounded-xl text-sm text-slate-300 font-semibold hover:bg-slate-800 transition">
+                Google
+            </a>
+            <a href="/auth/github" class="flex items-center justify-center py-2.5 px-4 bg-slate-900 border border-slate-800 rounded-xl text-sm text-slate-300 font-semibold hover:bg-slate-800 transition">
+                GitHub
+            </a>
+        </div>
+
+        <div class="text-center text-sm text-slate-400">
+            ¿No tienes cuenta? <a href="/register" class="text-brand-400 hover:underline font-semibold">Regístrate</a>
+        </div>
+    </div>
+</div>
+{{ end }}
+{{ end }}
