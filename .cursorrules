@@ -1,0 +1,7 @@
+# Reglas de Desarrollo de Event Hub
+
+Este archivo define reglas obligatorias para los agentes y asistentes de IA que operan en este repositorio:
+
+- **Prohibido el Uso de Rutas Absolutas**: Nunca uses ni escribas rutas absolutas de tu máquina local (ej. `/home/ /...` o similares) en comentarios, documentación, explicaciones, enlaces o código.
+- **Uso de Rutas Relativas**: Todas las rutas a archivos, directorios o enlaces en la documentación o código deben ser relativas al root de este proyecto (ej. `lib/core/network/api_client.dart`) o al plugin correspondiente.
+- **Compatibilidad Colaborativa**: Este proyecto es colaborativo y está destinado a estar en un repositorio público y servidores remotos, por lo que todo debe ser genérica y portátil.

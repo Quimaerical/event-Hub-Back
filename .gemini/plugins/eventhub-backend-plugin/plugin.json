@@ -1,0 +1,17 @@
+{
+  "name": "eventhub-backend-plugin",
+  "version": "1.0.0",
+  "description": "Custom skills and agents for developing and auditing the Event Hub Go/Gin backend and PostgreSQL database.",
+  "author": {
+    "name": "Antigravity Developer Pair"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "event-hub",
+    "go",
+    "gin",
+    "postgresql",
+    "gemini",
+    "google-calendar"
+  ]
+}
