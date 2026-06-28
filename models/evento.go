@@ -23,6 +23,16 @@ const (
 	EstadoRechazado  = "rechazado"
 )
 
+// Errores de negocio (Sentinel Errors)
+var ErrEspacioOcupado = errors.New("el espacio ya está ocupado en ese horario")
+
+// Estructura Categoria
+type Categoria struct {
+	ID          int    `json:"id"`
+	Nombre      string `json:"nombre"`
+	Descripcion string `json:"descripcion,omitempty"`
+}
+
 // Evento mapea exactamente la tabla 'eventos' usando pgtype para campos NULLABLES
 type Evento struct {
 	ID                 int64              `json:"id" form:"id"`
@@ -82,7 +92,7 @@ func CreateEvento(ctx context.Context, e *Evento, categoryIDs []int) error {
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.ConstraintName == "chk_sin_solapamiento" {
-			return errors.New("El espacio ya está ocupado en ese horario")
+			return ErrEspacioOcupado // <-- Usa el Sentinel Error
 		}
 		return err
 	}
@@ -132,15 +142,12 @@ func GetEventoByID(ctx context.Context, id int64) (*Evento, error) {
 
 // ActualizarEstadoEvento maneja transiciones y validaciones del ciclo de vida del evento.
 func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, aprobadorID *int64, observaciones string) error {
-	// 1. Validar si el estado existe
 	switch nuevoEstado {
 	case EstadoSolicitado, EstadoEnRevision, EstadoAprobado, EstadoProgramado, EstadoRealizado, EstadoCancelado, EstadoRechazado:
-		// Estado válido
 	default:
 		return errors.New("estado de evento inválido")
 	}
 
-	// 2. Reglas de negocio rígidas
 	if (nuevoEstado == EstadoRechazado || nuevoEstado == EstadoCancelado) && observaciones == "" {
 		return errors.New("las observaciones son obligatorias para rechazar o cancelar un evento")
 	}
@@ -151,7 +158,6 @@ func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, a
 	}
 	defer tx.Rollback(ctx)
 
-	// Auditoría: Pasamos el ID del aprobador (o el usuario que cancela) para el trigger de SQL
 	actorID := int64(0)
 	if aprobadorID != nil {
 		actorID = *aprobadorID
@@ -164,7 +170,6 @@ func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, a
 	var query string
 	var args []interface{}
 
-	// 3. Ejecución condicional del SQL según la transición
 	if nuevoEstado == EstadoAprobado {
 		query = `
 			UPDATE eventos 
@@ -173,7 +178,6 @@ func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, a
 		`
 		args = []interface{}{nuevoEstado, aprobadorID, id}
 	} else {
-		// Para cualquier otro cambio de estado, inyectamos las observaciones
 		query = `
 			UPDATE eventos 
 			SET estado = $1, observaciones = $2 
@@ -278,7 +282,6 @@ func GetCategoriasForEvento(ctx context.Context, eventoID int64) ([]Categoria, e
 		if err := rows.Scan(&c.ID, &c.Nombre, &desc); err != nil {
 			return nil, err
 		}
-		// Desempaquetar el pgtype.Text al struct de Categoria
 		if desc.Valid {
 			c.Descripcion = desc.String
 		}
@@ -290,4 +293,33 @@ func GetCategoriasForEvento(ctx context.Context, eventoID int64) ([]Categoria, e
 	}
 
 	return categories, nil
+}
+
+// GetAllCategorias obtiene el catálogo completo de categorías para el frontend.
+func GetAllCategorias(ctx context.Context) ([]Categoria, error) {
+	query := `SELECT id, nombre, descripcion FROM categorias ORDER BY nombre ASC`
+	rows, err := config.DB.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var categorias []Categoria
+	for rows.Next() {
+		var c Categoria
+		var desc pgtype.Text
+		if err := rows.Scan(&c.ID, &c.Nombre, &desc); err != nil {
+			return nil, err
+		}
+		if desc.Valid {
+			c.Descripcion = desc.String
+		}
+		categorias = append(categorias, c)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return categorias, nil
 }

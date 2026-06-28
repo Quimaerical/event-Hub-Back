@@ -1,13 +1,14 @@
 package controllers
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"event-hub/models"
 	"event-hub/services"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,7 +22,7 @@ func NewEventController(gemini *services.GeminiService) *EventController {
 	}
 }
 
-// ShowCreate displays the event creation form.
+// ShowCreate renderiza el formulario de creación de eventos.
 func (ctrl *EventController) ShowCreate(c *gin.Context) {
 	ctx := c.Request.Context()
 	categories, err := models.GetAllCategorias(ctx)
@@ -35,7 +36,6 @@ func (ctrl *EventController) ShowCreate(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	email, _ := c.Get("email")
 
-	// Return JSON if requested by mobile client
 	acceptHeader := c.GetHeader("Accept")
 	if strings.Contains(acceptHeader, "application/json") {
 		c.JSON(http.StatusOK, gin.H{
@@ -53,71 +53,47 @@ func (ctrl *EventController) ShowCreate(c *gin.Context) {
 	})
 }
 
-// HandleCreate processes the form submission to publish a new event.
+// HandleCreate procesa la creación de eventos adaptándose a JSON o Formularios HTML
 func (ctrl *EventController) HandleCreate(c *gin.Context) {
-	ctx := c.Request.Context()
+	var input struct {
+		models.Evento
+		Categorias []int `form:"categorias" json:"categorias" binding:"required,min=1"`
+	}
+
+	// 1. Binding Automático
+	if err := c.ShouldBind(&input); err != nil {
+		manejarErrorRespuesta(c, http.StatusBadRequest, "Datos de entrada inválidos: "+err.Error())
+		return
+	}
+
+	// 2. Extraer el ID del usuario del contexto
 	userIDVal, exists := c.Get("userID")
 	if !exists {
-		c.Redirect(http.StatusSeeOther, "/login")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Usuario no autenticado"})
 		return
 	}
-	userID := userIDVal.(int)
+	input.Evento.OrganizadorID = int64(userIDVal.(int))
 
-	titulo := c.PostForm("titulo")
-	descripcion := c.PostForm("descripcion")
-	fechaStr := c.PostForm("fecha")
-	ubicacion := c.PostForm("ubicacion")
-	categoriaIDsStr := c.PostFormArray("categorias")
+	// 3. Ejecutar la lógica de base de datos
+	ctx := c.Request.Context()
+	err := models.CreateEvento(ctx, &input.Evento, input.Categorias)
 
-	// Parse datetime
-	fecha, err := time.Parse("2006-01-02T15:04", fechaStr)
 	if err != nil {
-		categories, _ := models.GetAllCategorias(ctx)
-		c.HTML(http.StatusBadRequest, "events/create.html", gin.H{
-			"error":      "Formato de fecha inválido",
-			"categorias": categories,
-		})
-		return
-	}
-
-	// Parse categories list
-	var categoryIDs []int
-	for _, idStr := range categoriaIDsStr {
-		if id, err := strconv.Atoi(idStr); err == nil {
-			categoryIDs = append(categoryIDs, id)
-		}
-	}
-
-	event := &models.Evento{
-		Titulo:      titulo,
-		Descripcion: descripcion,
-		Fecha:       fecha,
-		Ubicacion:   ubicacion,
-		CreadorID:   userID,
-	}
-
-	err = models.CreateEvento(ctx, event, categoryIDs)
-	if err != nil {
-		// Handle JSON error format
-		acceptHeader := c.GetHeader("Accept")
-		if strings.Contains(acceptHeader, "application/json") {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al guardar el evento en la base de datos"})
+		// Detección robusta del error de conflicto usando Sentinel Errors
+		if errors.Is(err, models.ErrEspacioOcupado) {
+			manejarErrorRespuesta(c, http.StatusConflict, "El espacio ya está reservado para ese horario.")
 			return
 		}
-		categories, _ := models.GetAllCategorias(ctx)
-		c.HTML(http.StatusInternalServerError, "events/create.html", gin.H{
-			"error":      "Error al guardar el evento en la base de datos",
-			"categorias": categories,
-		})
+		manejarErrorRespuesta(c, http.StatusInternalServerError, "Error interno al guardar el evento")
 		return
 	}
 
-	// Return JSON if requested
+	// 4. Respuesta Exitosa Dual
 	acceptHeader := c.GetHeader("Accept")
 	if strings.Contains(acceptHeader, "application/json") {
 		c.JSON(http.StatusCreated, gin.H{
-			"message": "Evento creado exitosamente",
-			"evento":  event,
+			"message": "Evento creado exitosamente. Estado actual: " + models.EstadoSolicitado,
+			"evento":  input.Evento,
 		})
 		return
 	}
@@ -125,7 +101,56 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 	c.Redirect(http.StatusSeeOther, "/")
 }
 
-// SuggestDescription handles AJAX requests to generate rich event descriptions using Gemini.
+// HandleActualizarEstado maneja la aprobación o rechazo de un evento (Solo Coordinación de Cultura)
+func (ctrl *EventController) HandleActualizarEstado(c *gin.Context) {
+	// 1. Validación estricta de Roles (Seguridad)
+	rolNombre, exists := c.Get("role_nombre")
+	if !exists || rolNombre.(string) != "aprobador" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Acceso denegado: Solo la Coordinación de Cultura puede aprobar o rechazar eventos."})
+		return
+	}
+
+	// 2. Extraer el ID del evento de la URL (Ej: PATCH /eventos/:id/estado)
+	eventoIDStr := c.Param("id")
+	eventoID, err := strconv.ParseInt(eventoIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID de evento inválido"})
+		return
+	}
+
+	// 3. Parsear el cuerpo de la petición
+	var input struct {
+		Estado        string `json:"estado" binding:"required"`
+		Observaciones string `json:"observaciones"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Datos inválidos: " + err.Error()})
+		return
+	}
+
+	// 4. Obtener el ID del aprobador actual
+	userIDVal, _ := c.Get("userID")
+	aprobadorID := int64(userIDVal.(int))
+
+	// 5. Llamar al modelo de base de datos
+	ctx := c.Request.Context()
+	err = models.ActualizarEstadoEvento(ctx, eventoID, input.Estado, &aprobadorID, input.Observaciones)
+	
+	if err != nil {
+		if err.Error() == "estado de evento inválido" || err.Error() == "las observaciones son obligatorias para rechazar o cancelar un evento" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno al actualizar el estado"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"mensaje": "Estado del evento actualizado correctamente a: " + input.Estado,
+	})
+}
+
+// SuggestDescription se conecta con Gemini para generar descripciones enriquecidas
 func (ctrl *EventController) SuggestDescription(c *gin.Context) {
 	var req struct {
 		Titulo    string `json:"titulo" binding:"required"`
@@ -145,4 +170,15 @@ func (ctrl *EventController) SuggestDescription(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"descripcion": suggestion})
+}
+
+// manejarErrorRespuesta es una función auxiliar privada para mantener el código limpio (DRY)
+func manejarErrorRespuesta(c *gin.Context, status int, mensaje string) {
+	acceptHeader := c.GetHeader("Accept")
+	if strings.Contains(acceptHeader, "application/json") {
+		c.JSON(status, gin.H{"error": mensaje})
+		return
+	}
+	
+	c.HTML(status, "events/create.html", gin.H{"error": mensaje})
 }
