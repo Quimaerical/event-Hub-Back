@@ -58,7 +58,6 @@ func manejarErrorAPI(c *gin.Context, status int, mensaje string) {
 }
 
 // manejarErrorWeb renderiza una vista HTML inyectando el error.
-// FIX: Se agregó 'mensaje string' a la firma de la función.
 func manejarErrorWeb(c *gin.Context, status int, template string, mensaje string, data gin.H) {
 	data["error"] = mensaje
 	c.HTML(status, template, data)
@@ -82,7 +81,6 @@ func (ctrl *EventController) ShowCreate(c *gin.Context) {
 	ctx := c.Request.Context()
 	categories, err := models.GetAllCategorias(ctx)
 	if err != nil {
-		// FIX: Llamada corregida pasando el mensaje como parámetro
 		manejarErrorWeb(c, http.StatusInternalServerError, "events/create.html", "Error al cargar las categorías", gin.H{})
 		return
 	}
@@ -200,7 +198,6 @@ func (ctrl *EventController) HandleActualizarEstado(c *gin.Context) {
 		return
 	}
 
-	// FIX: Acepta JSON y HTML (form) usando ShouldBind
 	var input struct {
 		Estado        string `json:"estado" form:"estado" binding:"required"`
 		Observaciones string `json:"observaciones" form:"observaciones"`
@@ -235,7 +232,6 @@ func (ctrl *EventController) HandleActualizarEstado(c *gin.Context) {
 		return
 	}
 
-	// FIX: Uso de responderDual para vistas
 	responderDual(c, http.StatusOK, "events/detail.html",
 		gin.H{"mensaje": "Estado actualizado a: " + input.Estado},
 		gin.H{"mensaje": "Estado actualizado a: " + input.Estado})
@@ -249,7 +245,6 @@ func (ctrl *EventController) HandleCancelEvent(c *gin.Context) {
 		return
 	}
 
-	// FIX: Fallback seguro para manejar DELETE sin body JSON (desde web/formularios)
 	observaciones := c.PostForm("observaciones")
 	if observaciones == "" {
 		var input struct {
@@ -294,11 +289,19 @@ func (ctrl *EventController) HandleCancelEvent(c *gin.Context) {
 
 	err = models.ActualizarEstadoEvento(ctx, eventoID, models.EstadoCancelado, aprobadorID, observaciones)
 	if err != nil {
+		// FIX: Manejo adecuado de errores de negocio enviando Bad Request (400)
+		if errors.Is(err, models.ErrTransicionEstadoInvalida) || errors.Is(err, models.ErrObservacionesRequeridas) {
+			manejarErrorAPI(c, http.StatusBadRequest, err.Error())
+			return
+		}
 		manejarErrorAPI(c, http.StatusInternalServerError, "Error al cancelar el evento: "+err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"mensaje": "Evento cancelado exitosamente"})
+	// FIX: Uso de responderDual en lugar de solo responder JSON
+	responderDual(c, http.StatusOK, "events/list.html",
+		gin.H{"mensaje": "Evento cancelado exitosamente"},
+		gin.H{"mensaje": "Evento cancelado exitosamente"})
 }
 
 // ==========================================
