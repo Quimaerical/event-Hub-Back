@@ -57,8 +57,9 @@ func manejarErrorAPI(c *gin.Context, status int, mensaje string) {
 	c.JSON(status, gin.H{"error": mensaje})
 }
 
-// manejarErrorWeb renderiza una vista HTML inyectando el error
-func manejarErrorWeb(c *gin.Context, status int, template string, data gin.H) {
+// manejarErrorWeb renderiza una vista HTML inyectando el error.
+// FIX: Se agregó 'mensaje string' a la firma de la función.
+func manejarErrorWeb(c *gin.Context, status int, template string, mensaje string, data gin.H) {
 	data["error"] = mensaje
 	c.HTML(status, template, data)
 }
@@ -81,14 +82,15 @@ func (ctrl *EventController) ShowCreate(c *gin.Context) {
 	ctx := c.Request.Context()
 	categories, err := models.GetAllCategorias(ctx)
 	if err != nil {
-		manejarErrorWeb(c, http.StatusInternalServerError, "events/create.html", gin.H{})
+		// FIX: Llamada corregida pasando el mensaje como parámetro
+		manejarErrorWeb(c, http.StatusInternalServerError, "events/create.html", "Error al cargar las categorías", gin.H{})
 		return
 	}
 
 	userID, _ := c.Get("userID")
 	email, _ := c.Get("email")
 
-	responderDual(c, http.StatusOK, "events/create.html", 
+	responderDual(c, http.StatusOK, "events/create.html",
 		gin.H{"categorias": categories, "userID": userID, "email": email},
 		gin.H{"categorias": categories, "userID": userID, "email": email},
 	)
@@ -102,8 +104,8 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 	}
 
 	if err := c.ShouldBind(&input); err != nil {
-		responderDual(c, http.StatusBadRequest, "events/create.html", 
-			gin.H{"error": "Datos inválidos: " + err.Error()}, 
+		responderDual(c, http.StatusBadRequest, "events/create.html",
+			gin.H{"error": "Datos inválidos: " + err.Error()},
 			gin.H{"error": "Datos inválidos: " + err.Error()},
 		)
 		return
@@ -143,7 +145,7 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 func (ctrl *EventController) HandleListEvents(c *gin.Context) {
 	search := c.Query("search")
 	categoryIDStr := c.Query("category_id")
-	
+
 	var categoryID int
 	if categoryIDStr != "" {
 		parsed, err := strconv.Atoi(categoryIDStr)
@@ -198,12 +200,15 @@ func (ctrl *EventController) HandleActualizarEstado(c *gin.Context) {
 		return
 	}
 
+	// FIX: Acepta JSON y HTML (form) usando ShouldBind
 	var input struct {
-		Estado        string `json:"estado" binding:"required"`
-		Observaciones string `json:"observaciones"`
+		Estado        string `json:"estado" form:"estado" binding:"required"`
+		Observaciones string `json:"observaciones" form:"observaciones"`
 	}
-	if err := c.ShouldBindJSON(&input); err != nil {
-		manejarErrorAPI(c, http.StatusBadRequest, "Datos inválidos: "+err.Error())
+	if err := c.ShouldBind(&input); err != nil {
+		responderDual(c, http.StatusBadRequest, "events/detail.html",
+			gin.H{"error": "Datos inválidos: " + err.Error()},
+			gin.H{"error": "Datos inválidos: " + err.Error()})
 		return
 	}
 
@@ -215,17 +220,25 @@ func (ctrl *EventController) HandleActualizarEstado(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	err = models.ActualizarEstadoEvento(ctx, eventoID, input.Estado, &aprobadorID, input.Observaciones)
-	
+
 	if err != nil {
-		if errors.Is(err, models.ErrEstadoInvalido) || errors.Is(err, models.ErrObservacionesRequeridas) {
-			manejarErrorAPI(c, http.StatusBadRequest, err.Error())
+		// Detección de Sentinel Errors
+		if errors.Is(err, models.ErrEstadoInvalido) || errors.Is(err, models.ErrObservacionesRequeridas) || errors.Is(err, models.ErrTransicionEstadoInvalida) {
+			responderDual(c, http.StatusBadRequest, "events/detail.html",
+				gin.H{"error": err.Error()},
+				gin.H{"error": err.Error()})
 			return
 		}
-		manejarErrorAPI(c, http.StatusInternalServerError, "Error interno al actualizar estado")
+		responderDual(c, http.StatusInternalServerError, "events/detail.html",
+			gin.H{"error": "Error interno al actualizar estado"},
+			gin.H{"error": "Error interno al actualizar estado"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"mensaje": "Estado actualizado a: " + input.Estado})
+	// FIX: Uso de responderDual para vistas
+	responderDual(c, http.StatusOK, "events/detail.html",
+		gin.H{"mensaje": "Estado actualizado a: " + input.Estado},
+		gin.H{"mensaje": "Estado actualizado a: " + input.Estado})
 }
 
 // HandleCancelEvent maneja DELETE /eventos/:id (Organizador o Cultura)
@@ -236,10 +249,18 @@ func (ctrl *EventController) HandleCancelEvent(c *gin.Context) {
 		return
 	}
 
-	var input struct {
-		Observaciones string `json:"observaciones" binding:"required"`
+	// FIX: Fallback seguro para manejar DELETE sin body JSON (desde web/formularios)
+	observaciones := c.PostForm("observaciones")
+	if observaciones == "" {
+		var input struct {
+			Observaciones string `json:"observaciones"`
+		}
+		if err := c.ShouldBindJSON(&input); err == nil {
+			observaciones = input.Observaciones
+		}
 	}
-	if err := c.ShouldBindJSON(&input); err != nil {
+
+	if observaciones == "" {
 		manejarErrorAPI(c, http.StatusBadRequest, "Debe proporcionar el motivo de la cancelación en observaciones")
 		return
 	}
@@ -271,7 +292,7 @@ func (ctrl *EventController) HandleCancelEvent(c *gin.Context) {
 		aprobadorID = &userID
 	}
 
-	err = models.ActualizarEstadoEvento(ctx, eventoID, models.EstadoCancelado, aprobadorID, input.Observaciones)
+	err = models.ActualizarEstadoEvento(ctx, eventoID, models.EstadoCancelado, aprobadorID, observaciones)
 	if err != nil {
 		manejarErrorAPI(c, http.StatusInternalServerError, "Error al cancelar el evento: "+err.Error())
 		return

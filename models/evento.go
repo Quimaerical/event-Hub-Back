@@ -27,6 +27,7 @@ const (
 var ErrEspacioOcupado = errors.New("el espacio ya está ocupado en ese horario")
 var ErrEstadoInvalido = errors.New("estado de evento inválido")
 var ErrObservacionesRequeridas = errors.New("las observaciones son obligatorias para rechazar o cancelar un evento")
+var ErrTransicionEstadoInvalida = errors.New("transición de estado inválida") // Nuevo error
 
 // Estructura Categoria
 type Categoria struct {
@@ -55,7 +56,6 @@ type Evento struct {
 	FechaActualizacion time.Time          `json:"fecha_actualizacion"`
 	CalendarEventID    pgtype.Text        `json:"calendar_event_id"`
 
-	// Campos extra obtenidos con JOINs
 	OrganizadorNombre string      `json:"organizador_nombre,omitempty"`
 	EspacioNombre     string      `json:"espacio_nombre,omitempty"`
 	Categorias        []Categoria `json:"categorias,omitempty"`
@@ -69,7 +69,6 @@ func CreateEvento(ctx context.Context, e *Evento, categoryIDs []int) error {
 	}
 	defer tx.Rollback(ctx)
 
-	// Auditoría: Inyectar el ID del organizador para el trigger SQL
 	_, err = tx.Exec(ctx, "SET LOCAL myapp.current_user_id = $1", e.OrganizadorID)
 	if err != nil {
 		return err
@@ -90,11 +89,10 @@ func CreateEvento(ctx context.Context, e *Evento, categoryIDs []int) error {
 		&e.ID, &e.Estado, &e.FechaSolicitud, &e.FechaCreacion, &e.FechaActualizacion,
 	)
 
-	// Validación nativa del CONSTRAINT EXCLUDE de PostgreSQL
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.ConstraintName == "chk_sin_solapamiento" {
-			return ErrEspacioOcupado // <-- Usa el Sentinel Error
+			return ErrEspacioOcupado 
 		}
 		return err
 	}
@@ -143,7 +141,9 @@ func GetEventoByID(ctx context.Context, id int64) (*Evento, error) {
 }
 
 // ActualizarEstadoEvento maneja transiciones y validaciones del ciclo de vida del evento.
+// FIX: Transiciones bloqueantes con SELECT FOR UPDATE añadidas.
 func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, aprobadorID *int64, observaciones string) error {
+	// Validación de existencia de estado
 	switch nuevoEstado {
 	case EstadoSolicitado, EstadoEnRevision, EstadoAprobado, EstadoProgramado, EstadoRealizado, EstadoCancelado, EstadoRechazado:
 	default:
@@ -160,6 +160,7 @@ func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, a
 	}
 	defer tx.Rollback(ctx)
 
+	// Inyectar auditoría
 	actorID := int64(0)
 	if aprobadorID != nil {
 		actorID = *aprobadorID
@@ -169,6 +170,37 @@ func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, a
 		return err
 	}
 
+	// 1. Obtener estado actual bloqueando la fila (Prevención de race conditions)
+	var estadoActual string
+	err = tx.QueryRow(ctx, "SELECT estado FROM eventos WHERE id = $1 FOR UPDATE", id).Scan(&estadoActual)
+	if err != nil {
+		return errors.New("no se encontró el evento para actualizar")
+	}
+
+	// 2. Validar transición de estado
+	transicionesValidas := map[string][]string{
+		EstadoSolicitado: {EstadoEnRevision, EstadoCancelado},
+		EstadoEnRevision: {EstadoAprobado, EstadoRechazado, EstadoCancelado},
+		EstadoAprobado:   {EstadoProgramado, EstadoCancelado},
+		EstadoProgramado: {EstadoRealizado, EstadoCancelado},
+		EstadoRealizado:  {},
+		EstadoCancelado:  {},
+		EstadoRechazado:  {},
+	}
+
+	esValida := false
+	for _, estadoPermitido := range transicionesValidas[estadoActual] {
+		if nuevoEstado == estadoPermitido {
+			esValida = true
+			break
+		}
+	}
+
+	if !esValida {
+		return ErrTransicionEstadoInvalida
+	}
+
+	// 3. Ejecutar actualización
 	var query string
 	var args []interface{}
 
@@ -194,7 +226,7 @@ func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, a
 	}
 
 	if res.RowsAffected() == 0 {
-		return errors.New("no se encontró el evento para actualizar")
+		return errors.New("no se pudo actualizar el evento")
 	}
 
 	return tx.Commit(ctx)
@@ -253,6 +285,8 @@ func SearchEventos(ctx context.Context, search string, categoryID int) ([]Evento
 		return nil, err
 	}
 
+	// TODO: Optimizar N+1 Query. Actualmente hace 1 query por evento para traer categorías.
+	// Solución: Usar array_agg en la query principal o cargar categorías en batch.
 	for i := range events {
 		events[i].Categorias, err = GetCategoriasForEvento(ctx, events[i].ID)
 		if err != nil {
