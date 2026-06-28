@@ -219,7 +219,6 @@ func (ctrl *EventController) HandleActualizarEstado(c *gin.Context) {
 	err = models.ActualizarEstadoEvento(ctx, eventoID, input.Estado, &aprobadorID, input.Observaciones)
 
 	if err != nil {
-		// Detección de Sentinel Errors
 		if errors.Is(err, models.ErrEstadoInvalido) || errors.Is(err, models.ErrObservacionesRequeridas) || errors.Is(err, models.ErrTransicionEstadoInvalida) {
 			responderDual(c, http.StatusBadRequest, "events/detail.html",
 				gin.H{"error": err.Error()},
@@ -273,6 +272,12 @@ func (ctrl *EventController) HandleCancelEvent(c *gin.Context) {
 		return
 	}
 
+	// FIX 2: Validar estado actual antes de procesar para evitar transiciones inválidas confusas
+	if evento.Estado == models.EstadoCancelado {
+		manejarErrorAPI(c, http.StatusBadRequest, "El evento ya está cancelado")
+		return
+	}
+
 	rolNombre, _ := c.Get("role_nombre")
 	esAprobador := rolNombre != nil && rolNombre.(string) == "aprobador"
 	esOrganizador := evento.OrganizadorID == userID
@@ -289,7 +294,6 @@ func (ctrl *EventController) HandleCancelEvent(c *gin.Context) {
 
 	err = models.ActualizarEstadoEvento(ctx, eventoID, models.EstadoCancelado, aprobadorID, observaciones)
 	if err != nil {
-		// FIX: Manejo adecuado de errores de negocio enviando Bad Request (400)
 		if errors.Is(err, models.ErrTransicionEstadoInvalida) || errors.Is(err, models.ErrObservacionesRequeridas) {
 			manejarErrorAPI(c, http.StatusBadRequest, err.Error())
 			return
@@ -298,10 +302,12 @@ func (ctrl *EventController) HandleCancelEvent(c *gin.Context) {
 		return
 	}
 
-	// FIX: Uso de responderDual en lugar de solo responder JSON
-	responderDual(c, http.StatusOK, "events/list.html",
-		gin.H{"mensaje": "Evento cancelado exitosamente"},
-		gin.H{"mensaje": "Evento cancelado exitosamente"})
+	// FIX 1: Redireccionar para clientes web y devolver JSON para la API (Mantiene el soporte Dual real)
+	if strings.Contains(c.GetHeader("Accept"), "application/json") {
+		c.JSON(http.StatusOK, gin.H{"mensaje": "Evento cancelado exitosamente"})
+		return
+	}
+	c.Redirect(http.StatusSeeOther, "/eventos/")
 }
 
 // ==========================================
