@@ -10,6 +10,7 @@ import (
 	"event-hub/controllers"
 	"event-hub/middlewares"
 	"event-hub/services"
+
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
@@ -58,9 +59,18 @@ func main() {
 	protected := router.Group("/eventos")
 	protected.Use(middlewares.AuthRequired())
 	{
+		// Rutas estáticas (Deben ir antes de las rutas dinámicas como /:id para evitar conflictos en Gin)
 		protected.GET("/crear", eventCtrl.ShowCreate)
 		protected.POST("/crear", eventCtrl.HandleCreate)
 		protected.POST("/sugerir-descripcion", eventCtrl.SuggestDescription)
+
+		// Rutas de colección y detalle
+		protected.GET("/", eventCtrl.HandleListEvents)
+		protected.GET("/:id", eventCtrl.HandleGetEvent)
+
+		// Rutas de actualización y borrado
+		protected.PATCH("/:id/estado", eventCtrl.HandleActualizarEstado)
+		protected.DELETE("/:id", eventCtrl.HandleCancelEvent)
 	}
 
 	// 9. Start Server

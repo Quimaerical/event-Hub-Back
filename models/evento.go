@@ -25,6 +25,8 @@ const (
 
 // Errores de negocio (Sentinel Errors)
 var ErrEspacioOcupado = errors.New("el espacio ya está ocupado en ese horario")
+var ErrEstadoInvalido = errors.New("estado de evento inválido")
+var ErrObservacionesRequeridas = errors.New("las observaciones son obligatorias para rechazar o cancelar un evento")
 
 // Estructura Categoria
 type Categoria struct {
@@ -145,11 +147,11 @@ func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, a
 	switch nuevoEstado {
 	case EstadoSolicitado, EstadoEnRevision, EstadoAprobado, EstadoProgramado, EstadoRealizado, EstadoCancelado, EstadoRechazado:
 	default:
-		return errors.New("estado de evento inválido")
+		return ErrEstadoInvalido
 	}
 
 	if (nuevoEstado == EstadoRechazado || nuevoEstado == EstadoCancelado) && observaciones == "" {
-		return errors.New("las observaciones son obligatorias para rechazar o cancelar un evento")
+		return ErrObservacionesRequeridas
 	}
 
 	tx, err := config.DB.Begin(ctx)
