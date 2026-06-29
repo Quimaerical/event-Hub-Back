@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,18 +15,20 @@ import (
 	"event-hub/services"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/time/rate"
 )
 
 type EventController struct {
 	geminiService *services.GeminiService
-	rateLimitMap  map[string][]time.Time // Token Bucket / Sliding window en memoria
-	mu            sync.Mutex
+	// Fix 1: Utilizando paquete nativo de rate limit y RWMutex para concurrencia segura
+	rateLimiters map[string]*rate.Limiter
+	mu           sync.RWMutex
 }
 
 func NewEventController(gemini *services.GeminiService) *EventController {
 	return &EventController{
 		geminiService: gemini,
-		rateLimitMap:  make(map[string][]time.Time),
+		rateLimiters:  make(map[string]*rate.Limiter),
 	}
 }
 
@@ -111,6 +114,16 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 		return
 	}
 
+	// Fix 3: Validación estricta de fechas lógicas a nivel de aplicación
+	if !input.Evento.FechaFin.After(input.Evento.FechaInicio) {
+		slog.Warn("Intento de creación con fechas incoherentes", "fecha_inicio", input.Evento.FechaInicio, "fecha_fin", input.Evento.FechaFin)
+		responderDual(c, http.StatusBadRequest, "events/create.html",
+			gin.H{"error": "La fecha de fin debe ser posterior a la fecha de inicio"},
+			gin.H{"error": "La fecha de fin debe ser posterior a la fecha de inicio"},
+		)
+		return
+	}
+
 	userID, err := extractUserID(c)
 	if err != nil {
 		slog.Warn("Fallo de autenticación", "error", err)
@@ -174,9 +187,15 @@ func (ctrl *EventController) HandleListEvents(c *gin.Context) {
 		return
 	}
 
+	// Fix 4: Metadato Matemático de Paginación
+	totalPages := int(math.Ceil(float64(total) / float64(filtro.Limit)))
+	if totalPages < 1 {
+		totalPages = 1
+	}
+
 	slog.Info("Eventos listados exitosamente", "total_resultados", total)
-	respuestaJSON := gin.H{"eventos": eventos, "meta": gin.H{"total": total, "page": filtro.Page, "limit": filtro.Limit}}
-	respuestaHTML := gin.H{"eventos": eventos, "total": total, "page": filtro.Page, "limit": filtro.Limit}
+	respuestaJSON := gin.H{"eventos": eventos, "meta": gin.H{"total": total, "page": filtro.Page, "limit": filtro.Limit, "total_pages": totalPages}}
+	respuestaHTML := gin.H{"eventos": eventos, "total": total, "page": filtro.Page, "limit": filtro.Limit, "total_pages": totalPages}
 	responderDual(c, http.StatusOK, "events/list.html", respuestaJSON, respuestaHTML)
 }
 
@@ -204,7 +223,8 @@ func (ctrl *EventController) HandleGetEvent(c *gin.Context) {
 
 func (ctrl *EventController) HandleActualizarEstado(c *gin.Context) {
 	rolNombre, exists := c.Get("role_nombre")
-	if !exists || rolNombre.(string) != "aprobador" {
+	// Fix 5: Uso de constante exportada en lugar de Magic String
+	if !exists || rolNombre.(string) != models.RolAprobador {
 		slog.Warn("Acceso denegado: Intento de actualizar estado sin rol aprobador", "rol", rolNombre)
 		manejarErrorAPI(c, http.StatusForbidden, "Acceso denegado: Solo Coordinación de Cultura puede aprobar eventos")
 		return
@@ -298,7 +318,8 @@ func (ctrl *EventController) HandleCancelEvent(c *gin.Context) {
 	}
 
 	rolNombre, _ := c.Get("role_nombre")
-	esAprobador := rolNombre != nil && rolNombre.(string) == "aprobador"
+	// Fix 5: Validación unificada con constante
+	esAprobador := rolNombre != nil && rolNombre.(string) == models.RolAprobador
 	esOrganizador := evento.OrganizadorID == userID
 
 	if !esAprobador && !esOrganizador {
@@ -342,30 +363,31 @@ func (ctrl *EventController) SuggestDescription(c *gin.Context) {
 		return
 	}
 
-	// Rate Limiting (Token Bucket / Sliding Window)
+	// Fix 1: Rate Limiting usando golang.org/x/time/rate
 	ip := c.ClientIP()
-	ctrl.mu.Lock()
-	now := time.Now()
-	var peticionesActivas []time.Time
 	
-	// Limpiar timestamps más viejos que 1 minuto
-	for _, t := range ctrl.rateLimitMap[ip] {
-		if now.Sub(t) < time.Minute {
-			peticionesActivas = append(peticionesActivas, t)
+	ctrl.mu.RLock()
+	limiter, exists := ctrl.rateLimiters[ip]
+	ctrl.mu.RUnlock()
+
+	if !exists {
+		ctrl.mu.Lock()
+		// Double-check locking (prevención de concurrencia de creación)
+		limiter, exists = ctrl.rateLimiters[ip]
+		if !exists {
+			// Limitador: 10 peticiones/minuto = 1 cada 6 segundos (rate.Every(time.Minute / 10)), con burst de 10
+			limiter = rate.NewLimiter(rate.Every(time.Minute/10), 10)
+			ctrl.rateLimiters[ip] = limiter
 		}
-	}
-	
-	// Límite: 10 peticiones por minuto por IP
-	if len(peticionesActivas) >= 10 {
 		ctrl.mu.Unlock()
+	}
+
+	// Consumir un token y validar disponibilidad
+	if !limiter.Allow() {
 		slog.Warn("Rate limit excedido para Gemini", "ip", ip)
 		manejarErrorAPI(c, http.StatusTooManyRequests, "Demasiadas peticiones a la IA. Intente de nuevo en un minuto.")
 		return
 	}
-	
-	peticionesActivas = append(peticionesActivas, now)
-	ctrl.rateLimitMap[ip] = peticionesActivas
-	ctrl.mu.Unlock()
 
 	var req struct {
 		Titulo    string `json:"titulo" binding:"required"`

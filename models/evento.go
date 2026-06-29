@@ -24,6 +24,11 @@ const (
 	EstadoRechazado  = "rechazado"
 )
 
+// Constantes de Roles (Fix: Adiós a los Magic Strings)
+const (
+	RolAprobador = "aprobador"
+)
+
 // Errores de negocio (Sentinel Errors)
 var ErrEspacioOcupado = errors.New("el espacio ya está ocupado en ese horario")
 var ErrEstadoInvalido = errors.New("estado de evento inválido")
@@ -271,7 +276,6 @@ func SearchEventos(ctx context.Context, filtro FiltroEvento) ([]Evento, int, err
 		args = append(args, "%"+filtro.Search+"%")
 		argIndex++
 	}
-	// Usamos EXISTS para filtrar por ID sin excluir otras categorías en el array_agg final
 	if filtro.CategoryID > 0 {
 		query.WriteString(fmt.Sprintf(" AND EXISTS (SELECT 1 FROM evento_categorias ec2 WHERE ec2.evento_id = e.id AND ec2.categoria_id = $%d)", argIndex))
 		args = append(args, filtro.CategoryID)
@@ -293,7 +297,6 @@ func SearchEventos(ctx context.Context, filtro FiltroEvento) ([]Evento, int, err
 		argIndex++
 	}
 
-	// GROUP BY e.id es suficiente para agrupar las columnas de la tabla eventos en Postgres moderno
 	query.WriteString(` GROUP BY e.id, es.nombre, u.nombre `)
 	query.WriteString(fmt.Sprintf(" ORDER BY e.fecha_inicio ASC LIMIT $%d OFFSET $%d", argIndex, argIndex+1))
 	args = append(args, filtro.Limit, offset)
@@ -304,7 +307,8 @@ func SearchEventos(ctx context.Context, filtro FiltroEvento) ([]Evento, int, err
 	}
 	defer rows.Close()
 
-	var events []Evento
+	// Fix 2: Serialización segura inicializando el slice en lugar de dejarlo null
+	events := make([]Evento, 0)
 	totalCount := 0
 
 	for rows.Next() {
@@ -319,7 +323,6 @@ func SearchEventos(ctx context.Context, filtro FiltroEvento) ([]Evento, int, err
 			return nil, 0, err
 		}
 
-		// Reconstruir la lista de struct Categoria usando los nombres agregados
 		for _, cn := range catNombres {
 			e.Categorias = append(e.Categorias, Categoria{Nombre: cn})
 		}
@@ -381,7 +384,7 @@ func GetAllCategorias(ctx context.Context) ([]Categoria, error) {
 		if desc.Valid {
 			c.Descripcion = desc.String
 		}
-		categorias = append(categorias, c)
+		categories = append(categories, c)
 	}
 
 	return categorias, rows.Err()
