@@ -9,6 +9,7 @@ import (
 	"event-hub/models"
 	"event-hub/services"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type EventController struct {
@@ -32,6 +33,14 @@ func (ctrl *EventController) ShowCreate(c *gin.Context) {
 		return
 	}
 
+	spaces, err := models.GetAllEspacios(ctx)
+	if err != nil {
+		c.HTML(http.StatusInternalServerError, "events/create.html", gin.H{
+			"error": "Error al cargar los espacios",
+		})
+		return
+	}
+
 	userID, _ := c.Get("userID")
 	email, _ := c.Get("email")
 
@@ -40,6 +49,7 @@ func (ctrl *EventController) ShowCreate(c *gin.Context) {
 	if strings.Contains(acceptHeader, "application/json") {
 		c.JSON(http.StatusOK, gin.H{
 			"categorias": categories,
+			"espacios":   spaces,
 			"userID":     userID,
 			"email":      email,
 		})
@@ -48,6 +58,7 @@ func (ctrl *EventController) ShowCreate(c *gin.Context) {
 
 	c.HTML(http.StatusOK, "events/create.html", gin.H{
 		"categorias": categories,
+		"espacios":   spaces,
 		"userID":     userID,
 		"email":      email,
 	})
@@ -65,17 +76,57 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 
 	titulo := c.PostForm("titulo")
 	descripcion := c.PostForm("descripcion")
-	fechaStr := c.PostForm("fecha")
-	ubicacion := c.PostForm("ubicacion")
+	fechaInicioStr := c.PostForm("fecha_inicio")
+	fechaFinStr := c.PostForm("fecha_fin")
+	espacioIDStr := c.PostForm("espacio_id")
+	capacidadMaximaStr := c.PostForm("capacidad_maxima")
 	categoriaIDsStr := c.PostFormArray("categorias")
 
-	// Parse datetime
-	fecha, err := time.Parse("2006-01-02T15:04", fechaStr)
+	// Parse datetimes
+	fechaInicio, err := time.Parse("2006-01-02T15:04", fechaInicioStr)
 	if err != nil {
 		categories, _ := models.GetAllCategorias(ctx)
+		spaces, _ := models.GetAllEspacios(ctx)
 		c.HTML(http.StatusBadRequest, "events/create.html", gin.H{
-			"error":      "Formato de fecha inválido",
+			"error":      "Formato de fecha de inicio inválido",
 			"categorias": categories,
+			"espacios":   spaces,
+		})
+		return
+	}
+
+	fechaFin, err := time.Parse("2006-01-02T15:04", fechaFinStr)
+	if err != nil {
+		categories, _ := models.GetAllCategorias(ctx)
+		spaces, _ := models.GetAllEspacios(ctx)
+		c.HTML(http.StatusBadRequest, "events/create.html", gin.H{
+			"error":      "Formato de fecha de fin inválido",
+			"categorias": categories,
+			"espacios":   spaces,
+		})
+		return
+	}
+
+	espacioID, err := strconv.Atoi(espacioIDStr)
+	if err != nil {
+		categories, _ := models.GetAllCategorias(ctx)
+		spaces, _ := models.GetAllEspacios(ctx)
+		c.HTML(http.StatusBadRequest, "events/create.html", gin.H{
+			"error":      "Espacio seleccionado inválido",
+			"categorias": categories,
+			"espacios":   spaces,
+		})
+		return
+	}
+
+	capacidadMaxima, err := strconv.Atoi(capacidadMaximaStr)
+	if err != nil {
+		categories, _ := models.GetAllCategorias(ctx)
+		spaces, _ := models.GetAllEspacios(ctx)
+		c.HTML(http.StatusBadRequest, "events/create.html", gin.H{
+			"error":      "Capacidad máxima inválida",
+			"categorias": categories,
+			"espacios":   spaces,
 		})
 		return
 	}
@@ -89,11 +140,13 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 	}
 
 	event := &models.Evento{
-		Titulo:      titulo,
-		Descripcion: descripcion,
-		Fecha:       fecha,
-		Ubicacion:   ubicacion,
-		CreadorID:   userID,
+		Titulo:          titulo,
+		Descripcion:     pgtype.Text{String: descripcion, Valid: descripcion != ""},
+		EspacioID:       espacioID,
+		OrganizadorID:   int64(userID),
+		FechaInicio:     fechaInicio,
+		FechaFin:        fechaFin,
+		CapacidadMaxima: capacidadMaxima,
 	}
 
 	err = models.CreateEvento(ctx, event, categoryIDs)
@@ -101,13 +154,15 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 		// Handle JSON error format
 		acceptHeader := c.GetHeader("Accept")
 		if strings.Contains(acceptHeader, "application/json") {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al guardar el evento en la base de datos"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al guardar el evento: " + err.Error()})
 			return
 		}
 		categories, _ := models.GetAllCategorias(ctx)
+		spaces, _ := models.GetAllEspacios(ctx)
 		c.HTML(http.StatusInternalServerError, "events/create.html", gin.H{
-			"error":      "Error al guardar el evento en la base de datos",
+			"error":      "Error al guardar el evento: " + err.Error(),
 			"categorias": categories,
+			"espacios":   spaces,
 		})
 		return
 	}
