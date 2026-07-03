@@ -25,13 +25,28 @@
                 </div>
 
                 <div>
-                    <label for="fecha" class="block text-sm font-medium text-slate-300">Fecha y Hora</label>
-                    <input type="datetime-local" id="fecha" name="fecha" required class="mt-1 block w-full bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition">
+                    <label for="fecha_inicio" class="block text-sm font-medium text-slate-300">Fecha y Hora de Inicio</label>
+                    <input type="datetime-local" id="fecha_inicio" name="fecha_inicio" required class="mt-1 block w-full bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition">
                 </div>
 
                 <div>
-                    <label for="ubicacion" class="block text-sm font-medium text-slate-300">Ubicación / Enlace</label>
-                    <input type="text" id="ubicacion" name="ubicacion" required placeholder="Ej. Auditorio Central o Zoom" class="mt-1 block w-full bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition">
+                    <label for="fecha_fin" class="block text-sm font-medium text-slate-300">Fecha y Hora de Fin</label>
+                    <input type="datetime-local" id="fecha_fin" name="fecha_fin" required class="mt-1 block w-full bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition">
+                </div>
+
+                <div>
+                    <label for="espacio_id" class="block text-sm font-medium text-slate-300">Espacio</label>
+                    <select id="espacio_id" name="espacio_id" required class="mt-1 block w-full bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition">
+                        <option value="" disabled selected>Selecciona un espacio</option>
+                        {{ range .espacios }}
+                            <option value="{{ .ID }}">{{ .Nombre }} (Capacidad: {{ .Capacidad }})</option>
+                        {{ end }}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="capacidad_maxima" class="block text-sm font-medium text-slate-300">Capacidad Máxima</label>
+                    <input type="number" id="capacidad_maxima" name="capacidad_maxima" required min="1" placeholder="Ej. 50" class="mt-1 block w-full bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition">
                 </div>
             </div>
 
@@ -76,10 +91,11 @@
 <script>
     document.getElementById('btn-gemini').addEventListener('click', async () => {
         const titulo = document.getElementById('titulo').value.trim();
-        const ubicacion = document.getElementById('ubicacion').value.trim();
+        const espacioSelect = document.getElementById('espacio_id');
+        const ubicacion = espacioSelect.options[espacioSelect.selectedIndex] ? espacioSelect.options[espacioSelect.selectedIndex].text.split('(')[0].trim() : '';
 
-        if (!titulo || !ubicacion) {
-            alert('Por favor ingresa primero el título y la ubicación del evento para poder generar una descripción con IA.');
+        if (!titulo || !ubicacion || espacioSelect.value === "") {
+            alert('Por favor ingresa primero el título y selecciona un espacio para poder generar una descripción con IA.');
             return;
         }
 
