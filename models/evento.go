@@ -35,13 +35,6 @@ var ErrEstadoInvalido = errors.New("estado de evento inválido")
 var ErrObservacionesRequeridas = errors.New("las observaciones son obligatorias para rechazar o cancelar un evento")
 var ErrTransicionEstadoInvalida = errors.New("transición de estado inválida")
 
-// Estructura Categoria
-type Categoria struct {
-	ID          int    `json:"id"`
-	Nombre      string `json:"nombre"`
-	Descripcion string `json:"descripcion,omitempty"`
-}
-
 // FiltroEvento contiene los parámetros de búsqueda y paginación
 type FiltroEvento struct {
 	Search        string
@@ -366,26 +359,3 @@ func GetCategoriasForEvento(ctx context.Context, eventoID int64) ([]Categoria, e
 	return categories, rows.Err()
 }
 
-func GetAllCategorias(ctx context.Context) ([]Categoria, error) {
-	query := `SELECT id, nombre, descripcion FROM categorias ORDER BY nombre ASC`
-	rows, err := config.DB.Query(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var categorias []Categoria
-	for rows.Next() {
-		var c Categoria
-		var desc pgtype.Text
-		if err := rows.Scan(&c.ID, &c.Nombre, &desc); err != nil {
-			return nil, err
-		}
-		if desc.Valid {
-			c.Descripcion = desc.String
-		}
-		categories = append(categories, c)
-	}
-
-	return categorias, rows.Err()
-}
