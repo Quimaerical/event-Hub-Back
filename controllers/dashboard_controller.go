@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -27,10 +28,33 @@ func (ctrl *DashboardController) ShowDashboard(c *gin.Context) {
 		}
 	}
 
+	pageStr := c.Query("page")
+	limitStr := c.Query("limit")
+	page := 1
+	limit := 20
+
+	if pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
 	ctx := c.Request.Context()
 
+	filtro := models.FiltroEvento{
+		Search:     searchQuery,
+		CategoryID: categoryID,
+		Page:       page,
+		Limit:      limit,
+	}
+
 	// Query events (indexed search and filter category)
-	events, err := models.SearchEventos(ctx, searchQuery, categoryID)
+	events, totalCount, err := models.SearchEventos(ctx, filtro)
 	if err != nil {
 		c.HTML(http.StatusInternalServerError, "dashboard/index.html", gin.H{
 			"error": "Error al recuperar los eventos de la base de datos",
@@ -51,6 +75,12 @@ func (ctrl *DashboardController) ShowDashboard(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	email, _ := c.Get("email")
 
+	// Calculate total pages for UI
+	totalPages := int(math.Ceil(float64(totalCount) / float64(limit)))
+	if totalPages < 1 {
+		totalPages = 1
+	}
+
 	// Return JSON if requested by API clients (mobile)
 	importStrings := c.GetHeader("Accept")
 	if strings.Contains(importStrings, "application/json") {
@@ -61,6 +91,10 @@ func (ctrl *DashboardController) ShowDashboard(c *gin.Context) {
 			"selectedCategoryID": categoryID,
 			"userID":             userID,
 			"email":              email,
+			"page":               page,
+			"limit":              limit,
+			"totalCount":         totalCount,
+			"totalPages":         totalPages,
 		})
 		return
 	}
@@ -72,5 +106,9 @@ func (ctrl *DashboardController) ShowDashboard(c *gin.Context) {
 		"selectedCategoryID": categoryID,
 		"userID":             userID,
 		"email":              email,
+		"page":               page,
+		"limit":              limit,
+		"totalCount":         totalCount,
+		"totalPages":         totalPages,
 	})
 }
