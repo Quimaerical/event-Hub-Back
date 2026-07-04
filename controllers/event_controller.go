@@ -90,12 +90,19 @@ func (ctrl *EventController) ShowCreate(c *gin.Context) {
 		return
 	}
 
+	spaces, err := models.GetAllEspacios(ctx)
+	if err != nil {
+		slog.Error("Error al cargar espacios", "error", err)
+		manejarErrorWeb(c, http.StatusInternalServerError, "events/create.html", "Error al cargar los espacios", gin.H{})
+		return
+	}
+
 	userID, _ := c.Get("userID")
 	email, _ := c.Get("email")
 
 	responderDual(c, http.StatusOK, "events/create.html",
-		gin.H{"categorias": categories, "userID": userID, "email": email},
-		gin.H{"categorias": categories, "userID": userID, "email": email},
+		gin.H{"categorias": categories, "espacios": spaces, "userID": userID, "email": email},
+		gin.H{"categorias": categories, "espacios": spaces, "userID": userID, "email": email},
 	)
 }
 
@@ -107,19 +114,25 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 
 	if err := c.ShouldBind(&input); err != nil {
 		slog.Warn("Intento de creación con datos inválidos", "error", err)
+		ctx := c.Request.Context()
+		categories, _ := models.GetAllCategorias(ctx)
+		spaces, _ := models.GetAllEspacios(ctx)
 		responderDual(c, http.StatusBadRequest, "events/create.html",
-			gin.H{"error": "Datos inválidos: " + err.Error()},
-			gin.H{"error": "Datos inválidos: " + err.Error()},
+			gin.H{"error": "Datos inválidos: " + err.Error(), "categorias": categories, "espacios": spaces},
+			gin.H{"error": "Datos inválidos: " + err.Error(), "categorias": categories, "espacios": spaces},
 		)
 		return
 	}
 
 	// Fix 3: Validación estricta de fechas lógicas a nivel de aplicación
+	ctx := c.Request.Context()
 	if !input.Evento.FechaFin.After(input.Evento.FechaInicio) {
 		slog.Warn("Intento de creación con fechas incoherentes", "fecha_inicio", input.Evento.FechaInicio, "fecha_fin", input.Evento.FechaFin)
+		categories, _ := models.GetAllCategorias(ctx)
+		spaces, _ := models.GetAllEspacios(ctx)
 		responderDual(c, http.StatusBadRequest, "events/create.html",
-			gin.H{"error": "La fecha de fin debe ser posterior a la fecha de inicio"},
-			gin.H{"error": "La fecha de fin debe ser posterior a la fecha de inicio"},
+			gin.H{"error": "La fecha de fin debe ser posterior a la fecha de inicio", "categorias": categories, "espacios": spaces},
+			gin.H{"error": "La fecha de fin debe ser posterior a la fecha de inicio", "categorias": categories, "espacios": spaces},
 		)
 		return
 	}
@@ -132,17 +145,24 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 	}
 	input.Evento.OrganizadorID = userID
 
-	ctx := c.Request.Context()
 	err = models.CreateEvento(ctx, &input.Evento, input.Categorias)
 
 	if err != nil {
+		categories, _ := models.GetAllCategorias(ctx)
+		spaces, _ := models.GetAllEspacios(ctx)
 		if errors.Is(err, models.ErrEspacioOcupado) {
 			slog.Warn("Conflicto de espacio ocupado", "user_id", userID, "espacio_id", input.EspacioID)
-			responderDual(c, http.StatusConflict, "events/create.html", gin.H{"error": err.Error()}, gin.H{"error": err.Error()})
+			responderDual(c, http.StatusConflict, "events/create.html",
+				gin.H{"error": err.Error(), "categorias": categories, "espacios": spaces},
+				gin.H{"error": err.Error(), "categorias": categories, "espacios": spaces},
+			)
 			return
 		}
 		slog.Error("Error interno al crear evento", "error", err, "user_id", userID)
-		responderDual(c, http.StatusInternalServerError, "events/create.html", gin.H{"error": "Error interno al guardar"}, gin.H{"error": "Error interno"})
+		responderDual(c, http.StatusInternalServerError, "events/create.html",
+			gin.H{"error": "Error interno al guardar: " + err.Error(), "categorias": categories, "espacios": spaces},
+			gin.H{"error": "Error interno al guardar: " + err.Error(), "categorias": categories, "espacios": spaces},
+		)
 		return
 	}
 
