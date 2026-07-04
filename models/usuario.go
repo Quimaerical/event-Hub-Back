@@ -6,19 +6,30 @@ import (
 	"time"
 
 	"event-hub/config"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/oauth2"
 )
 
+// ErrTokenNoEncontrado se dispara cuando el usuario no tiene credenciales de Google vigentes
+var ErrTokenNoEncontrado = errors.New("token de Google no encontrado para el usuario")
+
 type Usuario struct {
-	ID            int       `json:"id" form:"id"`
-	Nombre        string    `json:"nombre" form:"nombre" binding:"required"`
-	Email         string    `json:"email" form:"email" binding:"required,email"`
-	PasswordHash  string    `json:"-"`
-	Password      string    `json:"password,omitempty" form:"password"`
-	RoleID        int       `json:"role_id" form:"role_id"`
-	OAuthProvider string    `json:"oauth_provider"`
-	OAuthID       string    `json:"oauth_id"`
-	CreatedAt     time.Time `json:"created_at"`
+	ID                 int                `json:"id" form:"id"`
+	Nombre             string             `json:"nombre" form:"nombre" binding:"required"`
+	Email              string             `json:"email" form:"email" binding:"required,email"`
+	PasswordHash       string             `json:"-"`
+	Password           string             `json:"password,omitempty" form:"password"`
+	RoleID             int                `json:"role_id" form:"role_id"`
+	OAuthProvider      string             `json:"oauth_provider"`
+	OAuthID            string             `json:"oauth_id"`
+	CreatedAt          time.Time          `json:"created_at"`
+	// NUEVO: Campos para sincronización con Google Calendar
+	GoogleAccessToken  pgtype.Text        `json:"-"`
+	GoogleRefreshToken pgtype.Text        `json:"-"`
+	GoogleTokenExpiry  pgtype.Timestamptz `json:"-"`
 }
 
 // CreateUsuario inserts a new user, hashing the password if it is local.
@@ -150,4 +161,68 @@ func Authenticate(ctx context.Context, email, password string) (*Usuario, error)
 		return nil, errors.New("correo o contraseña incorrectos")
 	}
 	return u, nil
+}
+
+// NUEVO: GetGoogleToken recupera el token OAuth 2.0 desde PostgreSQL
+func GetGoogleToken(ctx context.Context, userID int) (*oauth2.Token, error) {
+	query := `
+		SELECT google_access_token, google_refresh_token, google_token_expiry
+		FROM usuarios
+		WHERE id = $1
+	`
+	
+	var accessToken, refreshToken pgtype.Text
+	var expiry pgtype.Timestamptz
+	
+	err := config.DB.QueryRow(ctx, query, userID).Scan(&accessToken, &refreshToken, &expiry)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrTokenNoEncontrado
+		}
+		return nil, err
+	}
+
+	if !accessToken.Valid || accessToken.String == "" {
+		return nil, ErrTokenNoEncontrado
+	}
+
+	token := &oauth2.Token{
+		AccessToken:  accessToken.String,
+		RefreshToken: refreshToken.String,
+		TokenType:    "Bearer",
+	}
+
+	if expiry.Valid {
+		token.Expiry = expiry.Time
+	}
+
+	return token, nil
+}
+
+// NUEVO: SaveGoogleToken guarda o actualiza el token persistente de un usuario tras el Login
+func SaveGoogleToken(ctx context.Context, userID int, token *oauth2.Token) error {
+	if token == nil {
+		return errors.New("el token proporcionado es nulo")
+	}
+
+	query := `
+		UPDATE usuarios
+		SET google_access_token = $1,
+		    google_refresh_token = COALESCE($2, google_refresh_token),
+		    google_token_expiry = $3
+		WHERE id = $4
+	`
+	
+	var expiry pgtype.Timestamptz
+	if !token.Expiry.IsZero() {
+		expiry = pgtype.Timestamptz{Time: token.Expiry, Valid: true}
+	}
+
+	var refreshToken pgtype.Text
+	if token.RefreshToken != "" {
+		refreshToken = pgtype.Text{String: token.RefreshToken, Valid: true}
+	}
+
+	_, err := config.DB.Exec(ctx, query, token.AccessToken, refreshToken, expiry, userID)
+	return err
 }

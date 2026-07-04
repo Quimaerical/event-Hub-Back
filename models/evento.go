@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html"
 	"strings"
 	"time"
 
 	"event-hub/config"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -24,7 +26,7 @@ const (
 	EstadoRechazado  = "rechazado"
 )
 
-// Constantes de Roles (Fix: Adiós a los Magic Strings)
+// Constantes de Roles
 const (
 	RolAprobador = "aprobador"
 )
@@ -34,6 +36,12 @@ var ErrEspacioOcupado = errors.New("el espacio ya está ocupado en ese horario")
 var ErrEstadoInvalido = errors.New("estado de evento inválido")
 var ErrObservacionesRequeridas = errors.New("las observaciones son obligatorias para rechazar o cancelar un evento")
 var ErrTransicionEstadoInvalida = errors.New("transición de estado inválida")
+
+// Nuevos Errores para el Modelo de Inscripciones
+var ErrCupoCompleto = errors.New("el cupo para este evento está completo")
+var ErrEventoNoInscribible = errors.New("el evento no está en un estado válido para inscripciones")
+var ErrUsuarioYaInscrito = errors.New("el usuario ya está inscrito en este evento")
+var ErrInscripcionNoEncontrada = errors.New("inscripción no encontrada")
 
 // Estructura Categoria
 type Categoria struct {
@@ -80,6 +88,11 @@ type Evento struct {
 
 // CreateEvento inserta un evento interceptando errores de solapamiento de PostgreSQL.
 func CreateEvento(ctx context.Context, e *Evento, categoryIDs []int) error {
+	// FIX: Validación de capacidad lógica
+	if e.CapacidadMaxima <= 0 {
+		return errors.New("la capacidad máxima debe ser mayor a 0")
+	}
+
 	tx, err := config.DB.Begin(ctx)
 	if err != nil {
 		return err
@@ -157,13 +170,33 @@ func GetEventoByID(ctx context.Context, id int64) (*Evento, error) {
 	return &e, nil
 }
 
+// GetEventoByIDForUpdate bloquea la fila para prevenir race conditions al inscribir concurrentemente
+func GetEventoByIDForUpdate(ctx context.Context, tx pgx.Tx, id int64) (*Evento, error) {
+	query := `
+		SELECT id, organizador_id, estado, capacidad_maxima, calendar_event_id 
+		FROM eventos 
+		WHERE id = $1 FOR UPDATE
+	`
+	var e Evento
+	err := tx.QueryRow(ctx, query, id).Scan(
+		&e.ID, &e.OrganizadorID, &e.Estado, &e.CapacidadMaxima, &e.CalendarEventID,
+	)
+	return &e, err
+}
+
 // ActualizarEstadoEvento maneja transiciones y validaciones del ciclo de vida.
 func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, aprobadorID *int64, observaciones string) error {
+	// FIX: Normalizar estado a minúsculas para prevenir discrepancias
+	nuevoEstado = strings.ToLower(strings.TrimSpace(nuevoEstado))
+
 	switch nuevoEstado {
 	case EstadoSolicitado, EstadoEnRevision, EstadoAprobado, EstadoProgramado, EstadoRealizado, EstadoCancelado, EstadoRechazado:
 	default:
 		return ErrEstadoInvalido
 	}
+
+	// FIX: Sanitizar observaciones contra ataques XSS
+	observaciones = html.EscapeString(observaciones)
 
 	if (nuevoEstado == EstadoRechazado || nuevoEstado == EstadoCancelado) && observaciones == "" {
 		return ErrObservacionesRequeridas
@@ -243,6 +276,13 @@ func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, a
 	return tx.Commit(ctx)
 }
 
+// UpdateCalendarEventID vincula el evento local con el ID devuelto por la API de Google Calendar
+func UpdateCalendarEventID(ctx context.Context, eventoID int64, calendarID string) error {
+	query := `UPDATE eventos SET calendar_event_id = $1 WHERE id = $2`
+	_, err := config.DB.Exec(ctx, query, calendarID, eventoID)
+	return err
+}
+
 // SearchEventos recupera eventos con filtros dinámicos, paginación, y elimina N+1 con array_agg.
 func SearchEventos(ctx context.Context, filtro FiltroEvento) ([]Evento, int, error) {
 	if filtro.Page < 1 {
@@ -307,7 +347,6 @@ func SearchEventos(ctx context.Context, filtro FiltroEvento) ([]Evento, int, err
 	}
 	defer rows.Close()
 
-	// Fix 2: Serialización segura inicializando el slice en lugar de dejarlo null
 	events := make([]Evento, 0)
 	totalCount := 0
 
@@ -336,7 +375,6 @@ func SearchEventos(ctx context.Context, filtro FiltroEvento) ([]Evento, int, err
 	return events, totalCount, nil
 }
 
-// GetCategoriasForEvento (Mantenido para compatibilidad con GetEventoByID)
 func GetCategoriasForEvento(ctx context.Context, eventoID int64) ([]Categoria, error) {
 	query := `
 		SELECT c.id, c.nombre, c.descripcion
