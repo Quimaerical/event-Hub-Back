@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"event-hub/config"
@@ -12,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// Constantes de estado para la máquina de estados de la base de datos
+// Constantes de estado para la máquina de estados
 const (
 	EstadoSolicitado = "solicitado"
 	EstadoEnRevision = "en_revision"
@@ -23,7 +24,29 @@ const (
 	EstadoRechazado  = "rechazado"
 )
 
-// Evento mapea exactamente la tabla 'eventos' usando pgtype para campos NULLABLES
+// Constantes de Roles (Fix: Adiós a los Magic Strings)
+const (
+	RolAprobador = "aprobador"
+)
+
+// Errores de negocio (Sentinel Errors)
+var ErrEspacioOcupado = errors.New("el espacio ya está ocupado en ese horario")
+var ErrEstadoInvalido = errors.New("estado de evento inválido")
+var ErrObservacionesRequeridas = errors.New("las observaciones son obligatorias para rechazar o cancelar un evento")
+var ErrTransicionEstadoInvalida = errors.New("transición de estado inválida")
+
+// FiltroEvento contiene los parámetros de búsqueda y paginación
+type FiltroEvento struct {
+	Search        string
+	CategoryID    int
+	Estado        string
+	EspacioID     int
+	OrganizadorID int64
+	Page          int
+	Limit         int
+}
+
+// Evento mapea la tabla 'eventos'
 type Evento struct {
 	ID                 int64              `json:"id" form:"id"`
 	Titulo             string             `json:"titulo" form:"titulo" binding:"required"`
@@ -43,7 +66,6 @@ type Evento struct {
 	FechaActualizacion time.Time          `json:"fecha_actualizacion"`
 	CalendarEventID    pgtype.Text        `json:"calendar_event_id"`
 
-	// Campos extra obtenidos con JOINs
 	OrganizadorNombre string      `json:"organizador_nombre,omitempty"`
 	EspacioNombre     string      `json:"espacio_nombre,omitempty"`
 	Categorias        []Categoria `json:"categorias,omitempty"`
@@ -57,7 +79,6 @@ func CreateEvento(ctx context.Context, e *Evento, categoryIDs []int) error {
 	}
 	defer tx.Rollback(ctx)
 
-	// Auditoría: Inyectar el ID del organizador para el trigger SQL
 	_, err = tx.Exec(ctx, "SET LOCAL myapp.current_user_id = $1", e.OrganizadorID)
 	if err != nil {
 		return err
@@ -78,11 +99,10 @@ func CreateEvento(ctx context.Context, e *Evento, categoryIDs []int) error {
 		&e.ID, &e.Estado, &e.FechaSolicitud, &e.FechaCreacion, &e.FechaActualizacion,
 	)
 
-	// Validación nativa del CONSTRAINT EXCLUDE de PostgreSQL
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.ConstraintName == "chk_sin_solapamiento" {
-			return errors.New("El espacio ya está ocupado en ese horario")
+			return ErrEspacioOcupado
 		}
 		return err
 	}
@@ -98,7 +118,7 @@ func CreateEvento(ctx context.Context, e *Evento, categoryIDs []int) error {
 	return tx.Commit(ctx)
 }
 
-// GetEventoByID obtiene todos los campos, incluyendo los nuevos de pgtype.
+// GetEventoByID obtiene todos los campos
 func GetEventoByID(ctx context.Context, id int64) (*Evento, error) {
 	query := `
 		SELECT 
@@ -130,19 +150,16 @@ func GetEventoByID(ctx context.Context, id int64) (*Evento, error) {
 	return &e, nil
 }
 
-// ActualizarEstadoEvento maneja transiciones y validaciones del ciclo de vida del evento.
+// ActualizarEstadoEvento maneja transiciones y validaciones del ciclo de vida.
 func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, aprobadorID *int64, observaciones string) error {
-	// 1. Validar si el estado existe
 	switch nuevoEstado {
 	case EstadoSolicitado, EstadoEnRevision, EstadoAprobado, EstadoProgramado, EstadoRealizado, EstadoCancelado, EstadoRechazado:
-		// Estado válido
 	default:
-		return errors.New("estado de evento inválido")
+		return ErrEstadoInvalido
 	}
 
-	// 2. Reglas de negocio rígidas
 	if (nuevoEstado == EstadoRechazado || nuevoEstado == EstadoCancelado) && observaciones == "" {
-		return errors.New("las observaciones son obligatorias para rechazar o cancelar un evento")
+		return ErrObservacionesRequeridas
 	}
 
 	tx, err := config.DB.Begin(ctx)
@@ -151,7 +168,6 @@ func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, a
 	}
 	defer tx.Rollback(ctx)
 
-	// Auditoría: Pasamos el ID del aprobador (o el usuario que cancela) para el trigger de SQL
 	actorID := int64(0)
 	if aprobadorID != nil {
 		actorID = *aprobadorID
@@ -161,10 +177,37 @@ func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, a
 		return err
 	}
 
+	var estadoActual string
+	err = tx.QueryRow(ctx, "SELECT estado FROM eventos WHERE id = $1 FOR UPDATE", id).Scan(&estadoActual)
+	if err != nil {
+		return errors.New("no se encontró el evento para actualizar")
+	}
+
+	transicionesValidas := map[string][]string{
+		EstadoSolicitado: {EstadoEnRevision, EstadoCancelado},
+		EstadoEnRevision: {EstadoAprobado, EstadoRechazado, EstadoCancelado},
+		EstadoAprobado:   {EstadoProgramado, EstadoCancelado},
+		EstadoProgramado: {EstadoRealizado, EstadoCancelado},
+		EstadoRealizado:  {},
+		EstadoCancelado:  {},
+		EstadoRechazado:  {},
+	}
+
+	esValida := false
+	for _, estadoPermitido := range transicionesValidas[estadoActual] {
+		if nuevoEstado == estadoPermitido {
+			esValida = true
+			break
+		}
+	}
+
+	if !esValida {
+		return ErrTransicionEstadoInvalida
+	}
+
 	var query string
 	var args []interface{}
 
-	// 3. Ejecución condicional del SQL según la transición
 	if nuevoEstado == EstadoAprobado {
 		query = `
 			UPDATE eventos 
@@ -173,7 +216,6 @@ func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, a
 		`
 		args = []interface{}{nuevoEstado, aprobadorID, id}
 	} else {
-		// Para cualquier otro cambio de estado, inyectamos las observaciones
 		query = `
 			UPDATE eventos 
 			SET estado = $1, observaciones = $2 
@@ -188,76 +230,106 @@ func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, a
 	}
 
 	if res.RowsAffected() == 0 {
-		return errors.New("no se encontró el evento para actualizar")
+		return errors.New("no se pudo actualizar el evento")
 	}
 
 	return tx.Commit(ctx)
 }
 
-// SearchEventos recupera eventos con filtros dinámicos.
-func SearchEventos(ctx context.Context, search string, categoryID int) ([]Evento, error) {
-	var events []Evento
+// SearchEventos recupera eventos con filtros dinámicos, paginación, y elimina N+1 con array_agg.
+func SearchEventos(ctx context.Context, filtro FiltroEvento) ([]Evento, int, error) {
+	if filtro.Page < 1 {
+		filtro.Page = 1
+	}
+	if filtro.Limit < 1 || filtro.Limit > 100 {
+		filtro.Limit = 20
+	}
+	offset := (filtro.Page - 1) * filtro.Limit
 
-	query := `
-		SELECT DISTINCT 
+	var query strings.Builder
+	query.WriteString(`
+		SELECT 
 			e.id, e.titulo, e.descripcion, e.fecha_inicio, e.fecha_fin, 
-			e.estado, es.nombre as espacio_nombre, u.nombre as organizador_nombre
+			e.estado, es.nombre as espacio_nombre, u.nombre as organizador_nombre,
+			COALESCE(array_agg(c.nombre) FILTER (WHERE c.id IS NOT NULL), '{}') as categorias_nombres,
+			count(*) OVER() as total_count
 		FROM eventos e
 		JOIN usuarios u ON e.organizador_id = u.id
 		JOIN espacios es ON e.espacio_id = es.id
 		LEFT JOIN evento_categorias ec ON e.id = ec.evento_id
+		LEFT JOIN categorias c ON ec.categoria_id = c.id
 		WHERE 1=1
-	`
+	`)
+
 	args := []interface{}{}
 	argIndex := 1
 
-	if search != "" {
-		query += fmt.Sprintf(" AND (e.titulo ILIKE $%d OR e.descripcion ILIKE $%d OR es.nombre ILIKE $%d)", argIndex, argIndex, argIndex)
-		args = append(args, "%"+search+"%")
+	if filtro.Search != "" {
+		query.WriteString(fmt.Sprintf(" AND (e.titulo ILIKE $%d OR e.descripcion ILIKE $%d OR es.nombre ILIKE $%d)", argIndex, argIndex, argIndex))
+		args = append(args, "%"+filtro.Search+"%")
+		argIndex++
+	}
+	if filtro.CategoryID > 0 {
+		query.WriteString(fmt.Sprintf(" AND EXISTS (SELECT 1 FROM evento_categorias ec2 WHERE ec2.evento_id = e.id AND ec2.categoria_id = $%d)", argIndex))
+		args = append(args, filtro.CategoryID)
+		argIndex++
+	}
+	if filtro.Estado != "" {
+		query.WriteString(fmt.Sprintf(" AND e.estado = $%d", argIndex))
+		args = append(args, filtro.Estado)
+		argIndex++
+	}
+	if filtro.EspacioID > 0 {
+		query.WriteString(fmt.Sprintf(" AND e.espacio_id = $%d", argIndex))
+		args = append(args, filtro.EspacioID)
+		argIndex++
+	}
+	if filtro.OrganizadorID > 0 {
+		query.WriteString(fmt.Sprintf(" AND e.organizador_id = $%d", argIndex))
+		args = append(args, filtro.OrganizadorID)
 		argIndex++
 	}
 
-	if categoryID > 0 {
-		query += fmt.Sprintf(" AND ec.categoria_id = $%d", argIndex)
-		args = append(args, categoryID)
-		argIndex++
-	}
+	query.WriteString(` GROUP BY e.id, es.nombre, u.nombre `)
+	query.WriteString(fmt.Sprintf(" ORDER BY e.fecha_inicio ASC LIMIT $%d OFFSET $%d", argIndex, argIndex+1))
+	args = append(args, filtro.Limit, offset)
 
-	query += " ORDER BY e.fecha_inicio ASC"
-
-	rows, err := config.DB.Query(ctx, query, args...)
+	rows, err := config.DB.Query(ctx, query.String(), args...)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
+	// Fix 2: Serialización segura inicializando el slice en lugar de dejarlo null
+	events := make([]Evento, 0)
+	totalCount := 0
+
 	for rows.Next() {
 		var e Evento
+		var catNombres []string
 		err = rows.Scan(
 			&e.ID, &e.Titulo, &e.Descripcion, &e.FechaInicio, &e.FechaFin,
 			&e.Estado, &e.EspacioNombre, &e.OrganizadorNombre,
+			&catNombres, &totalCount,
 		)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
+		}
+
+		for _, cn := range catNombres {
+			e.Categorias = append(e.Categorias, Categoria{Nombre: cn})
 		}
 		events = append(events, e)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	for i := range events {
-		events[i].Categorias, err = GetCategoriasForEvento(ctx, events[i].ID)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return events, nil
+	return events, totalCount, nil
 }
 
-// GetCategoriasForEvento obtiene todas las categorías asociadas a un evento.
+// GetCategoriasForEvento (Mantenido para compatibilidad con GetEventoByID)
 func GetCategoriasForEvento(ctx context.Context, eventoID int64) ([]Categoria, error) {
 	query := `
 		SELECT c.id, c.nombre, c.descripcion
@@ -278,16 +350,12 @@ func GetCategoriasForEvento(ctx context.Context, eventoID int64) ([]Categoria, e
 		if err := rows.Scan(&c.ID, &c.Nombre, &desc); err != nil {
 			return nil, err
 		}
-		// Desempaquetar el pgtype.Text al struct de Categoria
 		if desc.Valid {
 			c.Descripcion = desc.String
 		}
 		categories = append(categories, c)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return categories, nil
+	return categories, rows.Err()
 }
+
