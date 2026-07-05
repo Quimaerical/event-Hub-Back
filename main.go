@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"log/slog" // FIX: Importación necesaria para el manejo estructurado de errores de Firebase
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,14 +27,29 @@ func main() {
 	config.ConnectDB()
 	defer config.CloseDB()
 
+	// NUEVO: Conectar a Firebase
+	if err := config.InitFirebase(); err != nil {
+		slog.Error("Fallo crítico al conectar con Firebase", "error", err)
+		// Puedes usar log.Fatal(err) si quieres que el servidor no arranque sin Firebase
+	}
+
 	// 3. Initialize Services
 	geminiSvc := services.NewGeminiService()
 	oauthSvc := services.NewOAuthService()
+	calendarSvc := services.NewCalendarService()                         // FIX: Instanciamos el servicio de Google Calendar
+	notificationSvc := services.NewNotificationService(config.FCMClient) // FIX: Instanciamos el servicio de Notificaciones con el cliente global
 
 	// 4. Initialize Controllers
 	dashboardCtrl := controllers.NewDashboardController()
 	authCtrl := controllers.NewAuthController(oauthSvc)
-	eventCtrl := controllers.NewEventController(geminiSvc)
+	eventCtrl := controllers.NewEventController(geminiSvc, calendarSvc) // FIX: Inyectamos el calendarSvc al controlador de eventos
+
+	// Opcional: Instanciamos el controlador de inscripciones (creado en la rama anterior)
+	// inscripcionCtrl := controllers.NewInscripcionController(calendarSvc)
+
+	// Opcional: Ignoramos que 'notificationSvc' no se está usando todavía en ninguna ruta para que Go no dé error de compilación.
+	// En el futuro lo pasarás a eventCtrl o al controlador que apruebe eventos.
+	_ = notificationSvc
 
 	// 5. Configure Gin Router
 	router := gin.Default()
@@ -71,7 +87,13 @@ func main() {
 		// Rutas de actualización y borrado
 		protected.PATCH("/:id/estado", eventCtrl.HandleActualizarEstado)
 		protected.DELETE("/:id", eventCtrl.HandleCancelEvent)
+
+		// Opcional: Aquí habilitarías la ruta de inscripción
+		// protected.POST("/:id/inscribir", inscripcionCtrl.HandleInscribir)
 	}
+
+	// Opcional: Ruta para cancelar inscripciones
+	// router.DELETE("/inscripciones/:id", middlewares.AuthRequired(), inscripcionCtrl.HandleCancelarInscripcion)
 
 	// 9. Start Server
 	port := os.Getenv("PORT")
