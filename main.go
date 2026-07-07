@@ -36,20 +36,17 @@ func main() {
 	// 3. Initialize Services
 	geminiSvc := services.NewGeminiService()
 	oauthSvc := services.NewOAuthService()
-	calendarSvc := services.NewCalendarService()                         // FIX: Instanciamos el servicio de Google Calendar
-	notificationSvc := services.NewNotificationService(config.FCMClient) // FIX: Instanciamos el servicio de Notificaciones con el cliente global
+	calendarSvc := services.NewCalendarService()
+	notificationSvc := services.NewNotificationService(config.FCMClient)
 
 	// 4. Initialize Controllers
 	dashboardCtrl := controllers.NewDashboardController()
 	authCtrl := controllers.NewAuthController(oauthSvc)
-	eventCtrl := controllers.NewEventController(geminiSvc, calendarSvc) // FIX: Inyectamos el calendarSvc al controlador de eventos
+	// FIX: Inyectamos notificationSvc al controlador de eventos
+	eventCtrl := controllers.NewEventController(geminiSvc, calendarSvc, notificationSvc)
 
 	// Opcional: Instanciamos el controlador de inscripciones (creado en la rama anterior)
 	// inscripcionCtrl := controllers.NewInscripcionController(calendarSvc)
-
-	// Opcional: Ignoramos que 'notificationSvc' no se está usando todavía en ninguna ruta para que Go no dé error de compilación.
-	// En el futuro lo pasarás a eventCtrl o al controlador que apruebe eventos.
-	_ = notificationSvc
 
 	// 5. Configure Gin Router
 	router := gin.Default()
@@ -72,6 +69,14 @@ func main() {
 	router.GET("/auth/github/callback", authCtrl.GitHubCallback)
 
 	// 8. Register Protected Routes
+	
+	// Crear un grupo de rutas de perfil/auth que requieren estar logueado
+	perfilProtegido := router.Group("/perfil")
+	perfilProtegido.Use(middlewares.AuthRequired())
+	{
+		perfilProtegido.POST("/fcm-token", authCtrl.HandleUpdateFCMToken)
+	}
+
 	protected := router.Group("/eventos")
 	protected.Use(middlewares.AuthRequired())
 	{

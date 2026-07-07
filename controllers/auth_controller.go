@@ -200,3 +200,55 @@ func generateState() string {
 	rand.Read(b)
 	return base64.URLEncoding.EncodeToString(b)
 }
+
+// ==========================================
+// NUEVO: INTEGRACIÓN CON FIREBASE/FLUTTER
+// ==========================================
+
+// Estructura esperada desde el frontend/móvil
+type FCMTokenInput struct {
+	Token string `json:"fcm_token" binding:"required"`
+}
+
+// HandleUpdateFCMToken recibe el token del dispositivo móvil y lo guarda en la base de datos
+func (ctrl *AuthController) HandleUpdateFCMToken(c *gin.Context) {
+	// 1. Extraer el ID del usuario autenticado desde el contexto del middleware
+	userIDVal, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Usuario no autorizado"})
+		return
+	}
+
+	// Casteo seguro del ID a int64
+	var userID int64
+	switch v := userIDVal.(type) {
+	case int:
+		userID = int64(v)
+	case int64:
+		userID = v
+	case float64:
+		userID = int64(v)
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error interno con la sesión del usuario"})
+		return
+	}
+
+	// 2. Validar el JSON recibido
+	var input FCMTokenInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "El campo fcm_token es obligatorio"})
+		return
+	}
+
+	// 3. Llamar al modelo para guardar el token en PostgreSQL
+	err := models.UpdateFCMToken(c.Request.Context(), userID, input.Token)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al actualizar el token en la base de datos"})
+		return
+	}
+
+	// 4. Respuesta exitosa
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Token de notificaciones actualizado correctamente",
+	})
+}
