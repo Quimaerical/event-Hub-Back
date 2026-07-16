@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -15,20 +16,47 @@ import (
 	"event-hub/services"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/oauth2"
 	"golang.org/x/time/rate"
 )
 
-type EventController struct {
-	geminiService *services.GeminiService
-	// Fix 1: Utilizando paquete nativo de rate limit y RWMutex para concurrencia segura
-	rateLimiters map[string]*rate.Limiter
-	mu           sync.RWMutex
+// Wrapper para el Rate Limiter que permite limpieza (Garbage Collection)
+type visitorLimiter struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
 }
 
-func NewEventController(gemini *services.GeminiService) *EventController {
-	return &EventController{
-		geminiService: gemini,
-		rateLimiters:  make(map[string]*rate.Limiter),
+type EventController struct {
+	geminiService   *services.GeminiService
+	calendarService *services.CalendarService
+	rateLimiters    map[string]*visitorLimiter
+	mu              sync.RWMutex
+}
+
+// Inicialización del controlador con servicios inyectados
+func NewEventController(gemini *services.GeminiService, calendar *services.CalendarService) *EventController {
+	ctrl := &EventController{
+		geminiService:   gemini,
+		calendarService: calendar,
+		rateLimiters:    make(map[string]*visitorLimiter),
+	}
+	
+	// Lanzar Goroutine en background para evitar Memory Leaks
+	go ctrl.cleanupVisitors()
+	return ctrl
+}
+
+// cleanupVisitors elimina de RAM los limitadores inactivos por más de 5 minutos
+func (ctrl *EventController) cleanupVisitors() {
+	for {
+		time.Sleep(time.Minute * 2)
+		ctrl.mu.Lock()
+		for ip, v := range ctrl.rateLimiters {
+			if time.Since(v.lastSeen) > time.Minute*5 {
+				delete(ctrl.rateLimiters, ip)
+			}
+		}
+		ctrl.mu.Unlock()
 	}
 }
 
@@ -90,19 +118,12 @@ func (ctrl *EventController) ShowCreate(c *gin.Context) {
 		return
 	}
 
-	spaces, err := models.GetAllEspacios(ctx)
-	if err != nil {
-		slog.Error("Error al cargar espacios", "error", err)
-		manejarErrorWeb(c, http.StatusInternalServerError, "events/create.html", "Error al cargar los espacios", gin.H{})
-		return
-	}
-
 	userID, _ := c.Get("userID")
 	email, _ := c.Get("email")
 
 	responderDual(c, http.StatusOK, "events/create.html",
-		gin.H{"categorias": categories, "espacios": spaces, "userID": userID, "email": email},
-		gin.H{"categorias": categories, "espacios": spaces, "userID": userID, "email": email},
+		gin.H{"categorias": categories, "userID": userID, "email": email},
+		gin.H{"categorias": categories, "userID": userID, "email": email},
 	)
 }
 
@@ -114,25 +135,18 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 
 	if err := c.ShouldBind(&input); err != nil {
 		slog.Warn("Intento de creación con datos inválidos", "error", err)
-		ctx := c.Request.Context()
-		categories, _ := models.GetAllCategorias(ctx)
-		spaces, _ := models.GetAllEspacios(ctx)
 		responderDual(c, http.StatusBadRequest, "events/create.html",
-			gin.H{"error": "Datos inválidos: " + err.Error(), "categorias": categories, "espacios": spaces},
-			gin.H{"error": "Datos inválidos: " + err.Error(), "categorias": categories, "espacios": spaces},
+			gin.H{"error": "Datos inválidos: " + err.Error()},
+			gin.H{"error": "Datos inválidos: " + err.Error()},
 		)
 		return
 	}
 
-	// Fix 3: Validación estricta de fechas lógicas a nivel de aplicación
-	ctx := c.Request.Context()
 	if !input.Evento.FechaFin.After(input.Evento.FechaInicio) {
 		slog.Warn("Intento de creación con fechas incoherentes", "fecha_inicio", input.Evento.FechaInicio, "fecha_fin", input.Evento.FechaFin)
-		categories, _ := models.GetAllCategorias(ctx)
-		spaces, _ := models.GetAllEspacios(ctx)
 		responderDual(c, http.StatusBadRequest, "events/create.html",
-			gin.H{"error": "La fecha de fin debe ser posterior a la fecha de inicio", "categorias": categories, "espacios": spaces},
-			gin.H{"error": "La fecha de fin debe ser posterior a la fecha de inicio", "categorias": categories, "espacios": spaces},
+			gin.H{"error": "La fecha de fin debe ser posterior a la fecha de inicio"},
+			gin.H{"error": "La fecha de fin debe ser posterior a la fecha de inicio"},
 		)
 		return
 	}
@@ -145,28 +159,44 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 	}
 	input.Evento.OrganizadorID = userID
 
+	ctx := c.Request.Context()
 	err = models.CreateEvento(ctx, &input.Evento, input.Categorias)
 
 	if err != nil {
-		categories, _ := models.GetAllCategorias(ctx)
-		spaces, _ := models.GetAllEspacios(ctx)
 		if errors.Is(err, models.ErrEspacioOcupado) {
 			slog.Warn("Conflicto de espacio ocupado", "user_id", userID, "espacio_id", input.EspacioID)
-			responderDual(c, http.StatusConflict, "events/create.html",
-				gin.H{"error": err.Error(), "categorias": categories, "espacios": spaces},
-				gin.H{"error": err.Error(), "categorias": categories, "espacios": spaces},
-			)
+			responderDual(c, http.StatusConflict, "events/create.html", gin.H{"error": err.Error()}, gin.H{"error": err.Error()})
 			return
 		}
 		slog.Error("Error interno al crear evento", "error", err, "user_id", userID)
-		responderDual(c, http.StatusInternalServerError, "events/create.html",
-			gin.H{"error": "Error interno al guardar: " + err.Error(), "categorias": categories, "espacios": spaces},
-			gin.H{"error": "Error interno al guardar: " + err.Error(), "categorias": categories, "espacios": spaces},
-		)
+		responderDual(c, http.StatusInternalServerError, "events/create.html", gin.H{"error": "Error interno al guardar"}, gin.H{"error": "Error interno"})
 		return
 	}
 
-	slog.Info("Evento creado exitosamente", "evento_id", input.Evento.ID, "user_id", userID)
+	slog.Info("Evento creado localmente", "evento_id", input.Evento.ID, "user_id", userID)
+
+	// FIX: Reemplazar el mock por la obtención real del token desde BD
+	tokenOAuth, err := models.GetGoogleToken(ctx, int(userID))
+	if err != nil {
+		slog.Warn("Usuario sin token de Google Calendar, omitiendo sincronización", "user_id", userID)
+	} else if ctrl.calendarService != nil {
+		go func(ev models.Evento, token *oauth2.Token) {
+			// Usamos Background() con Timeout porque el request original terminará pronto
+			bgCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			calID, errCal := ctrl.calendarService.CreateCalendarEvent(bgCtx, token, &ev)
+			if errCal != nil {
+				// Resiliencia: Solo loggeamos, la BD local ya guardó el evento
+				slog.Error("Fallo al sincronizar con Google Calendar", "evento_id", ev.ID, "error", errCal)
+				return
+			}
+			
+			// Actualizamos BD si tuvo éxito
+			_ = models.UpdateCalendarEventID(bgCtx, ev.ID, calID)
+		}(input.Evento, tokenOAuth)
+	}
+
 	if strings.Contains(c.GetHeader("Accept"), "application/json") {
 		c.JSON(http.StatusCreated, gin.H{"message": "Evento creado", "evento": input.Evento})
 		return
@@ -207,7 +237,6 @@ func (ctrl *EventController) HandleListEvents(c *gin.Context) {
 		return
 	}
 
-	// Fix 4: Metadato Matemático de Paginación
 	totalPages := int(math.Ceil(float64(total) / float64(filtro.Limit)))
 	if totalPages < 1 {
 		totalPages = 1
@@ -243,7 +272,6 @@ func (ctrl *EventController) HandleGetEvent(c *gin.Context) {
 
 func (ctrl *EventController) HandleActualizarEstado(c *gin.Context) {
 	rolNombre, exists := c.Get("role_nombre")
-	// Fix 5: Uso de constante exportada en lugar de Magic String
 	if !exists || rolNombre.(string) != models.RolAprobador {
 		slog.Warn("Acceso denegado: Intento de actualizar estado sin rol aprobador", "rol", rolNombre)
 		manejarErrorAPI(c, http.StatusForbidden, "Acceso denegado: Solo Coordinación de Cultura puede aprobar eventos")
@@ -338,7 +366,6 @@ func (ctrl *EventController) HandleCancelEvent(c *gin.Context) {
 	}
 
 	rolNombre, _ := c.Get("role_nombre")
-	// Fix 5: Validación unificada con constante
 	esAprobador := rolNombre != nil && rolNombre.(string) == models.RolAprobador
 	esOrganizador := evento.OrganizadorID == userID
 
@@ -383,26 +410,30 @@ func (ctrl *EventController) SuggestDescription(c *gin.Context) {
 		return
 	}
 
-	// Fix 1: Rate Limiting usando golang.org/x/time/rate
 	ip := c.ClientIP()
 	
 	ctrl.mu.RLock()
-	limiter, exists := ctrl.rateLimiters[ip]
+	v, exists := ctrl.rateLimiters[ip]
 	ctrl.mu.RUnlock()
 
 	if !exists {
 		ctrl.mu.Lock()
-		// Double-check locking (prevención de concurrencia de creación)
-		limiter, exists = ctrl.rateLimiters[ip]
+		v, exists = ctrl.rateLimiters[ip]
 		if !exists {
-			// Limitador: 10 peticiones/minuto = 1 cada 6 segundos (rate.Every(time.Minute / 10)), con burst de 10
-			limiter = rate.NewLimiter(rate.Every(time.Minute/10), 10)
-			ctrl.rateLimiters[ip] = limiter
+			v = &visitorLimiter{
+				limiter:  rate.NewLimiter(rate.Every(time.Minute/10), 10),
+				lastSeen: time.Now(),
+			}
+			ctrl.rateLimiters[ip] = v
 		}
 		ctrl.mu.Unlock()
 	}
 
-	// Consumir un token y validar disponibilidad
+	ctrl.mu.Lock()
+	v.lastSeen = time.Now()
+	limiter := v.limiter
+	ctrl.mu.Unlock()
+
 	if !limiter.Allow() {
 		slog.Warn("Rate limit excedido para Gemini", "ip", ip)
 		manejarErrorAPI(c, http.StatusTooManyRequests, "Demasiadas peticiones a la IA. Intente de nuevo en un minuto.")

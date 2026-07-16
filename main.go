@@ -29,11 +29,12 @@ func main() {
 	// 3. Initialize Services
 	geminiSvc := services.NewGeminiService()
 	oauthSvc := services.NewOAuthService()
+	calendarSvc := services.NewCalendarService()
 
 	// 4. Initialize Controllers
 	dashboardCtrl := controllers.NewDashboardController()
 	authCtrl := controllers.NewAuthController(oauthSvc)
-	eventCtrl := controllers.NewEventController(geminiSvc)
+	eventCtrl := controllers.NewEventController(geminiSvc, calendarSvc)
 
 	// 5. Configure Gin Router
 	router := gin.Default()
