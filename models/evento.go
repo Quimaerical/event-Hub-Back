@@ -43,12 +43,7 @@ var ErrEventoNoInscribible = errors.New("el evento no está en un estado válido
 var ErrUsuarioYaInscrito = errors.New("el usuario ya está inscrito en este evento")
 var ErrInscripcionNoEncontrada = errors.New("inscripción no encontrada")
 
-// Estructura Categoria
-type Categoria struct {
-	ID          int    `json:"id"`
-	Nombre      string `json:"nombre"`
-	Descripcion string `json:"descripcion,omitempty"`
-}
+
 
 // FiltroEvento contiene los parámetros de búsqueda y paginación
 type FiltroEvento struct {
@@ -404,26 +399,4 @@ func GetCategoriasForEvento(ctx context.Context, eventoID int64) ([]Categoria, e
 	return categories, rows.Err()
 }
 
-func GetAllCategorias(ctx context.Context) ([]Categoria, error) {
-	query := `SELECT id, nombre, descripcion FROM categorias ORDER BY nombre ASC`
-	rows, err := config.DB.Query(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 
-	var categorias []Categoria
-	for rows.Next() {
-		var c Categoria
-		var desc pgtype.Text
-		if err := rows.Scan(&c.ID, &c.Nombre, &desc); err != nil {
-			return nil, err
-		}
-		if desc.Valid {
-			c.Descripcion = desc.String
-		}
-		categories = append(categories, c)
-	}
-
-	return categorias, rows.Err()
-}
