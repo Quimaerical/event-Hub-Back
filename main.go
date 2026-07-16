@@ -1,6 +1,7 @@
 package main
 
 import (
+	"html/template"
 	"log"
 	"log/slog" // FIX: Importación necesaria para el manejo estructurado de errores de Firebase
 	"os"
@@ -13,6 +14,7 @@ import (
 	"event-hub/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/render"
 	"github.com/joho/godotenv"
 )
 
@@ -116,21 +118,86 @@ func main() {
 	}
 }
 
-// loadTemplates finds all template files nested inside the views folder and registers them.
+// CustomHTMLRenderer implements Gin's render.HTMLRender interface
+// to allow standard layout inheritance without template collisions.
+type CustomHTMLRenderer struct {
+	templates map[string]*template.Template
+}
+
+func (r *CustomHTMLRenderer) Instance(name string, data any) render.Render {
+	return render.HTML{
+		Template: r.templates[name],
+		Name:     name,
+		Data:     data,
+	}
+}
+
+// loadTemplates finds all template files nested inside the views folder
+// and registers them as independent template groups to prevent namespace collision.
 func loadTemplates(r *gin.Engine) {
-	var files []string
+	renderer := &CustomHTMLRenderer{
+		templates: make(map[string]*template.Template),
+	}
+
+	var layoutsAndPartials []string
+	
+	// 1. Gather layouts and partials
 	err := filepath.Walk("views", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if !info.IsDir() && strings.HasSuffix(path, ".html") {
-			files = append(files, path)
+			if strings.Contains(path, "/layouts/") || strings.Contains(path, "/partials/") {
+				layoutsAndPartials = append(layoutsAndPartials, path)
+			}
 		}
 		return nil
 	})
 	if err != nil {
-		log.Fatalf("Error al leer directorio de vistas: %v", err)
+		log.Fatalf("Error al leer layouts/partials: %v", err)
 	}
 
-	r.LoadHTMLFiles(files...)
+	// 2. Gather page templates and construct individual groups
+	err = filepath.Walk("views", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && strings.HasSuffix(path, ".html") {
+			if !strings.Contains(path, "/layouts/") && !strings.Contains(path, "/partials/") {
+				relPath, errRel := filepath.Rel("views", path)
+				if errRel != nil {
+					log.Fatalf("Error obteniendo ruta relativa: %v", errRel)
+				}
+				relPath = filepath.ToSlash(relPath)
+
+				// Create template named exactly relPath
+				tmpl := template.New(relPath)
+
+				content, errRead := os.ReadFile(path)
+				if errRead != nil {
+					log.Fatalf("Error leyendo template %s: %v", path, errRead)
+				}
+
+				tmpl, errParse := tmpl.Parse(string(content))
+				if errParse != nil {
+					log.Fatalf("Error parseando template %s: %v", path, errParse)
+				}
+
+				if len(layoutsAndPartials) > 0 {
+					tmpl, errParse = tmpl.ParseFiles(layoutsAndPartials...)
+					if errParse != nil {
+						log.Fatalf("Error asociando layouts/partials a %s: %v", path, errParse)
+					}
+				}
+
+				renderer.templates[relPath] = tmpl
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		log.Fatalf("Error al leer vistas: %v", err)
+	}
+
+	r.HTMLRender = renderer
 }

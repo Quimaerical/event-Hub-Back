@@ -1,4 +1,3 @@
-{{ define "dashboard/index.html" }}
 {{ template "layouts/base.html" . }}
 
 {{ define "title" }}Cartelera de Eventos - Event Hub{{ end }}
@@ -6,13 +5,13 @@
 {{ define "content" }}
 <div class="space-y-8">
     <!-- Hero / Header -->
-    <div class="text-center max-w-2xl mx-auto space-y-4">
+    <div class="text-center max-w-2xl mx-auto space-y-4 animate-fade-in-up">
         <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">Descubre Eventos del Hub</h1>
         <p class="text-slate-400 text-base sm:text-lg">Explora conferencias de tecnología, conciertos en vivo, talleres de negocios y galerías de arte organizadas por la comunidad.</p>
     </div>
 
     <!-- Search & Filters -->
-    <div class="space-y-4">
+    <div class="space-y-4 animate-fade-in-up delay-100">
         {{ template "partials/search_bar.html" . }}
         {{ template "partials/category_filter.html" . }}
     </div>
@@ -91,5 +90,15 @@
         {{ end }}
     </div>
 </div>
-{{ end }}
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Staggered fade-in entrance for the event cards
+        const cards = document.querySelectorAll('article.glass-card');
+        cards.forEach((card, index) => {
+            card.classList.add('animate-fade-in-up');
+            card.style.animationDelay = `${index * 60 + 200}ms`;
+        });
+    });
+</script>
 {{ end }}

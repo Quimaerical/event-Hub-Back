@@ -1,0 +1,254 @@
+<!DOCTYPE html><html lang="es" class="dark" style=""><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet"><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">try{
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-container": "#0ea5e9",
+                        "on-secondary": "#003732",
+                        "tertiary": "#ffb86e",
+                        "on-secondary-container": "#00302b",
+                        "error": "#ffb4ab",
+                        "outline-variant": "#3e4850",
+                        "on-tertiary-fixed": "#2c1600",
+                        "secondary-fixed-dim": "#6bd8cb",
+                        "tertiary-fixed-dim": "#ffb86e",
+                        "bg-light": "#f8fafc",
+                        "surface-container-highest": "#30353a",
+                        "on-tertiary": "#492900",
+                        "on-secondary-fixed": "#00201d",
+                        "inverse-on-surface": "#2c3135",
+                        "on-tertiary-fixed-variant": "#693c00",
+                        "on-primary-fixed": "#001e2f",
+                        "on-secondary-fixed-variant": "#005049",
+                        "on-primary-fixed-variant": "#004c6e",
+                        "error-container": "#93000a",
+                        "background": "#0f1418",
+                        "outline": "#88929b",
+                        "bg-dark": "#020617",
+                        "surface-container-low": "#171c20",
+                        "on-primary-container": "#003751",
+                        "surface": "#0f1418",
+                        "on-primary": "#00344d",
+                        "surface-container-lowest": "#0a0f13",
+                        "inverse-surface": "#dee3e9",
+                        "on-tertiary-container": "#4d2b00",
+                        "muted-slate": "#64748b",
+                        "primary-fixed": "#c9e6ff",
+                        "surface-tint": "#89ceff",
+                        "inverse-primary": "#006591",
+                        "surface-bright": "#353a3e",
+                        "on-error-container": "#ffdad6",
+                        "primary-fixed-dim": "#89ceff",
+                        "on-surface-variant": "#bec8d2",
+                        "on-error": "#690005",
+                        "on-surface": "#dee3e9",
+                        "secondary-fixed": "#89f5e7",
+                        "primary": "#89ceff",
+                        "tertiary-fixed": "#ffdcbd",
+                        "surface-dim": "#0f1418",
+                        "surface-container-high": "#252b2f",
+                        "surface-variant": "#30353a",
+                        "secondary-container": "#29a195",
+                        "on-background": "#dee3e9",
+                        "tertiary-container": "#de8712",
+                        "surface-container": "#1b2024",
+                        "secondary": "#6bd8cb"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "1.5rem",
+                        "margin-desktop": "2rem",
+                        "container-max": "1280px",
+                        "margin-mobile": "1rem"
+                    },
+                    "fontFamily": {
+                        "display-lg-mobile": ["Outfit"],
+                        "body-lg": ["Outfit"],
+                        "label-md": ["Outfit"],
+                        "display-lg": ["Outfit"],
+                        "body-md": ["Outfit"],
+                        "label-sm": ["Outfit"],
+                        "headline-md": ["Outfit"],
+                        "headline-lg": ["Outfit"]
+                    },
+                    "fontSize": {
+                        "display-lg-mobile": ["36px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "1.4", "letterSpacing": "0.025em", "fontWeight": "500" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.25", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    }catch(_e){}</script><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap" data-snapdom="injected-import"></head><body class="bg-bg-light dark:bg-bg-dark text-on-surface dark:text-on-background min-h-screen transition-colors duration-300 antialiased font-body-md text-body-md">
+<!-- TopNavBar -->
+<header class="sticky top-0 w-full z-50 bg-surface/40 dark:bg-background/40 backdrop-blur-md border-b border-outline-variant/10 dark:border-outline/5 shadow-sm dark:shadow-none">
+<div class="flex justify-between items-center max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop h-16">
+<div class="flex items-center gap-8">
+<a href="{{DATA:SCREEN:SCREEN_5}}" class="font-bold text-2xl md:text-3xl bg-gradient-to-r from-[#0ea5e9] to-[#0d9488] bg-clip-text text-transparent active:scale-95 duration-200 ease-in-out">
+                    Event Hub
+                </a>
+<nav class="hidden md:flex items-center gap-6"><a href="{{DATA:SCREEN:SCREEN_5}}" class="text-primary font-bold border-b-2 border-primary pb-1 font-label-md text-label-md active:scale-95 duration-200 ease-in-out">Cartelera</a><a href="#" class="text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors font-label-md text-label-md active:scale-95 duration-200 ease-in-out hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-lg px-2 py-1">Calendario</a><a href="{{DATA:SCREEN:SCREEN_2}}" class="text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors font-label-md text-label-md active:scale-95 duration-200 ease-in-out hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-lg px-2 py-1">Crear Evento</a></nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-full active:scale-95 duration-200 ease-in-out"><span class="material-symbols-outlined">notifications</span></button><button id="theme-toggle" class="p-2 text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-full active:scale-95 duration-200 ease-in-out">
+<span class="material-symbols-outlined" id="theme-icon">dark_mode</span>
+</button>
+<div class="hidden md:flex items-center gap-4 pl-4 border-l border-outline-variant/20 dark:border-outline/20">
+<div class="flex items-center gap-2">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="A small, professional headshot of a young professional smiling. High-key lighting, modern corporate style, vibrant blue background to match the Event Hub theme." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAM1T871aYw1Yi7RmuejLx1jVjU6qlbzQ6xoO0-DvpvzfOGN7TIr9UnCZ_jvbhUCohdnTU7tim603odw_NVScEAenU9uCaEhOcEAEX5ff_yV264qoocyCrQBoxz2jnIbZ9X04Xv-tXGGWjTzJMj-YOMLuu9mM_MK7ktutyVwrga5KASQrYxawU8ODM_Ku73OR9-o_HyTI0N1t2qOyktO4RY7U8ikKn58Wq1vaEQJflUDny2UUIl2owD">
+<span class="font-label-md text-label-md">Hola, Alex</span>
+</div>
+<button class="text-on-surface-variant dark:text-on-surface hover:text-error transition-colors" onclick="window.location.href='{{DATA:SCREEN:SCREEN_7}}'">
+<span class="material-symbols-outlined">logout</span>
+</button>
+</div>
+</div>
+</div>
+</header>
+<main class="pb-24 md:pb-12">
+<!-- Hero Section -->
+<section class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop pt-16 pb-12 md:pt-24 md:pb-16 text-center">
+<h1 class="font-display-lg-mobile text-display-lg-mobile md:font-display-lg md:text-display-lg bg-gradient-to-r from-primary-container via-secondary to-tertiary bg-clip-text text-transparent mb-6 max-w-3xl mx-auto">
+                Descubre experiencias inolvidables
+            </h1>
+<div class="max-w-xl mx-auto relative group">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-muted-slate group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full bg-slate-100/80 dark:bg-slate-950/60 border border-slate-200/50 dark:border-outline-variant/30 text-on-surface dark:text-on-background rounded-full py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:bg-white dark:focus:bg-slate-900/80 transition-all font-body-md text-body-md shadow-sm dark:shadow-none" placeholder="Buscar eventos, artistas, o lugares..." type="text">
+</div>
+</section>
+<!-- Category Filters -->
+<section class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop mb-8">
+<div class="flex overflow-x-auto gap-3 pb-4 scrollbar-hide">
+<button class="whitespace-nowrap px-6 py-2 rounded-full bg-primary-container text-white font-label-md text-label-md transition-all active:scale-95 shadow-sm">Tecnología</button>
+<button class="whitespace-nowrap px-6 py-2 rounded-full bg-surface-container dark:bg-surface-container-high border border-outline-variant/20 dark:border-outline/10 text-on-surface-variant hover:text-primary hover:border-primary/50 transition-all active:scale-95 font-label-md text-label-md">Música</button>
+<button class="whitespace-nowrap px-6 py-2 rounded-full bg-surface-container dark:bg-surface-container-high border border-outline-variant/20 dark:border-outline/10 text-on-surface-variant hover:text-primary hover:border-primary/50 transition-all active:scale-95 font-label-md text-label-md">Talleres</button>
+<button class="whitespace-nowrap px-6 py-2 rounded-full bg-surface-container dark:bg-surface-container-high border border-outline-variant/20 dark:border-outline/10 text-on-surface-variant hover:text-primary hover:border-primary/50 transition-all active:scale-95 font-label-md text-label-md">Arte</button>
+</div>
+</section>
+<!-- Events Grid -->
+<section class="max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Event Card 1 -->
+<div class="group bg-white/80 dark:bg-slate-900/40 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-white/5 overflow-hidden hover:shadow-lg dark:hover:bg-slate-900/60 transition-all duration-300">
+<div class="h-48 relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A modern tech conference stage with bright blue and green lighting, sleek minimalist podium, large glowing screens displaying abstract data visualizations. High contrast, cinematic lighting, corporate tech aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1h5vpRYaoDswiPqLJum8-ecXL9fMnSYhJvWdomSf3SggJbqsbUYiDWubAAxsTlMMjHCqccPvIDpe5wme0TjC3M8hnSm9dndLPr3DZ6hjMb0lKlq9rC9BFa395HcdnxgfSiptvDeydaYHA4WxBxUImPa8NxTsTmI-4BT0WO-4N3yflDAXIZ661sL_ifOIoFgeJD5HLmsUl8vlUw7hrq8pSCG7HYel4ZSOgUmjfX91oHAEbxUAQ_rXy">
+<div class="absolute top-3 left-3 bg-primary-container text-white px-3 py-1 rounded-full font-label-sm text-label-sm shadow-sm backdrop-blur-sm">Tecnología</div>
+</div>
+<div class="p-5 flex flex-col gap-3">
+<h3 class="font-headline-md text-headline-md text-on-surface dark:text-on-background line-clamp-2">AI &amp; Future Tech Summit 2024</h3>
+<div class="flex items-center gap-2 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<span class="">15 Oct, 2024 • 09:00 AM</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+<span class="">Centro de Convenciones, Ciudad de México</span>
+</div>
+<div class="mt-4 flex items-center justify-between border-t border-outline-variant/10 dark:border-outline/10 pt-4">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-[10px]">TH</div>
+<span class="font-label-sm text-label-sm text-muted-slate">TechHub Inc.</span>
+</div>
+<span class="font-bold text-primary">$120 USD</span>
+</div>
+</div>
+</div>
+<!-- Event Card 2 -->
+<div class="group bg-white/80 dark:bg-slate-900/40 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-white/5 overflow-hidden hover:shadow-lg dark:hover:bg-slate-900/60 transition-all duration-300">
+<div class="h-48 relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A vibrant outdoor music festival at dusk. Stage lights in deep slates and sky blues piercing through light smoke. Silhouettes of an energetic crowd in the foreground. Modern festival aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_3o_lskszdNcQMDHT-wnOj6RMLJbYz_xwnWM1wKBK8-sQHTk0trrpDab3HWY1Wi4x189LY7S4gtLlC-0dkNIFEsRmO91MXFbJRp4bTGD-yBeTJd3cHkvG9iVMSY1b88txGQIfXo4OYftcEgQE7mC-eh3MvyOrbx8PTOHqpsHLAih4VT_IfivNVnDLO2yPMKImFkl3ZBjb0l3WmaFN0Ntu0yFzYAsZLHC0Ka3hgbuA5I5a7-aAQDHb">
+<div class="absolute top-3 left-3 bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full font-label-sm text-label-sm shadow-sm backdrop-blur-sm">Música</div>
+</div>
+<div class="p-5 flex flex-col gap-3">
+<h3 class="font-headline-md text-headline-md text-on-surface dark:text-on-background line-clamp-2">Neon Nights Festival</h3>
+<div class="flex items-center gap-2 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<span class="">22 Nov, 2024 • 18:00 PM</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+<span class="">Parque Fundidora, Monterrey</span>
+</div>
+<div class="mt-4 flex items-center justify-between border-t border-outline-variant/10 dark:border-outline/10 pt-4">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center font-bold text-[10px]">LE</div>
+<span class="font-label-sm text-label-sm text-muted-slate">Live Events</span>
+</div>
+<span class="font-bold text-primary">$85 USD</span>
+</div>
+</div>
+</div>
+<!-- Event Card 3 -->
+<div class="group bg-white/80 dark:bg-slate-900/40 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-white/5 overflow-hidden hover:shadow-lg dark:hover:bg-slate-900/60 transition-all duration-300">
+<div class="h-48 relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A bright, modern workshop space with sleek laptops on light wooden desks. Soft natural lighting from large windows. Minimalist tech environment, focus on learning and coding." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBe6cc0fjieM8ZRJehK6Bn8iRRk5-kRPpRK04NZBgT2h4ECFH4jekaMCswFFg_kDYbIjsl-XJ4SRGXSvRR1x1tN6uMqL3ajHZM8aJR9ikbnm889vRlk8lANm2kaPRy9e0o_Zi-7z0yc_-YrmeJHxeJEJdvT_7ZKe8F8Dgw918Tx55cWqun-53UdrUhbttWIMBfd60TGsEbNyEPbnKV26DVo4DftkIAU1zkCadfAbDi49mtna9BWKeaO">
+<div class="absolute top-3 left-3 bg-primary-container text-white px-3 py-1 rounded-full font-label-sm text-label-sm shadow-sm backdrop-blur-sm">Talleres</div>
+</div>
+<div class="p-5 flex flex-col gap-3">
+<h3 class="font-headline-md text-headline-md text-on-surface dark:text-on-background line-clamp-2">Masterclass: React Avanzado</h3>
+<div class="flex items-center gap-2 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<span class="">05 Dic, 2024 • 10:00 AM</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+<span class="">Virtual (Zoom)</span>
+</div>
+<div class="mt-4 flex items-center justify-between border-t border-outline-variant/10 dark:border-outline/10 pt-4">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-primary-container text-white flex items-center justify-center font-bold text-[10px]">CD</div>
+<span class="font-label-sm text-label-sm text-muted-slate">CodeAcademy</span>
+</div>
+<span class="font-bold text-primary">Gratis</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden flex justify-around items-center h-16 px-4 bg-surface/60 dark:bg-surface-container-low/60 backdrop-blur-lg fixed bottom-0 w-full z-50 rounded-t-xl border-t border-outline-variant/10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-3 py-1 active:scale-90 transition-transform font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined text-on-primary-container">explore</span>
+            Descubrir
+        </a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant hover:bg-primary/10 transition-all active:scale-90 font-label-sm text-label-sm" href="{{DATA:SCREEN:SCREEN_2}}">
+<span class="material-symbols-outlined">add_circle</span>
+            Crear
+        </a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant hover:bg-primary/10 transition-all active:scale-90 font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined">confirmation_number</span>
+            Tickets
+        </a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant hover:bg-primary/10 transition-all active:scale-90 font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined">person</span>
+            Perfil
+        </a>
+</nav>
+<script>
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const html = document.documentElement;
+
+        themeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            if (html.classList.contains('dark')) {
+                themeIcon.textContent = 'light_mode';
+            } else {
+                themeIcon.textContent = 'dark_mode';
+            }
+        });
+    </script>
+
+</body></html>

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mis Inscripciones - Event Hub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-container": "#0ea5e9",
+                        "on-tertiary-fixed-variant": "#693c00",
+                        "primary-fixed-dim": "#89ceff",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-highest": "#30353a",
+                        "primary": "#89ceff",
+                        "surface-container-lowest": "#0a0f13",
+                        "error-container": "#93000a",
+                        "surface": "#0f1418",
+                        "on-primary": "#00344d",
+                        "inverse-primary": "#006591",
+                        "surface-tint": "#89ceff",
+                        "secondary-container": "#29a195",
+                        "surface-container-high": "#252b2f",
+                        "on-surface-variant": "#bec8d2",
+                        "tertiary": "#ffb86e",
+                        "secondary": "#6bd8cb",
+                        "muted-slate": "#64748b",
+                        "inverse-surface": "#dee3e9",
+                        "on-tertiary-fixed": "#2c1600",
+                        "bg-light": "#f8fafc",
+                        "outline-variant": "#3e4850",
+                        "secondary-fixed-dim": "#6bd8cb",
+                        "on-secondary": "#003732",
+                        "outline": "#88929b",
+                        "tertiary-fixed-dim": "#ffb86e",
+                        "surface-variant": "#30353a",
+                        "surface-container-low": "#171c20",
+                        "on-secondary-fixed": "#00201d",
+                        "background": "#0f1418",
+                        "surface-dim": "#0f1418",
+                        "bg-dark": "#020617",
+                        "on-error": "#690005",
+                        "surface-container": "#1b2024",
+                        "primary-fixed": "#c9e6ff",
+                        "on-secondary-container": "#00302b",
+                        "on-primary-fixed-variant": "#004c6e",
+                        "inverse-on-surface": "#2c3135",
+                        "on-primary-container": "#003751",
+                        "tertiary-container": "#de8712",
+                        "surface-bright": "#353a3e",
+                        "on-background": "#dee3e9",
+                        "secondary-fixed": "#89f5e7",
+                        "on-tertiary-container": "#4d2b00",
+                        "on-primary-fixed": "#001e2f",
+                        "on-secondary-fixed-variant": "#005049",
+                        "tertiary-fixed": "#ffdcbd",
+                        "on-surface": "#dee3e9",
+                        "error": "#ffb4ab",
+                        "on-tertiary": "#492900"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-max": "1280px",
+                        "margin-mobile": "1rem",
+                        "gutter": "1.5rem",
+                        "margin-desktop": "2rem"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Outfit"],
+                        "body-md": ["Outfit"],
+                        "label-sm": ["Outfit"],
+                        "display-lg": ["Outfit"],
+                        "label-md": ["Outfit"],
+                        "body-lg": ["Outfit"],
+                        "display-lg-mobile": ["Outfit"],
+                        "headline-lg": ["Outfit"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "fontWeight": "700" }],
+                        "label-md": ["14px", { "lineHeight": "1.4", "letterSpacing": "0.025em", "fontWeight": "500" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "display-lg-mobile": ["36px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.25", "fontWeight": "600" }]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-card {
+            background: rgba(15, 20, 24, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="bg-bg-light dark:bg-bg-dark text-on-surface dark:text-on-background min-h-screen transition-colors duration-300 antialiased font-body-md text-body-md flex flex-col">
+<!-- TopNavBar -->
+<header class="sticky top-0 w-full z-50 bg-surface/40 dark:bg-background/40 backdrop-blur-md border-b border-outline-variant/10 dark:border-outline/5 shadow-sm dark:shadow-none">
+<div class="flex justify-between items-center max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop h-16">
+<div class="flex items-center gap-8">
+<a class="font-bold text-2xl md:text-3xl bg-gradient-to-r from-[#0ea5e9] to-[#0d9488] bg-clip-text text-transparent active:scale-95 duration-200 ease-in-out" href="#">
+                    Event Hub
+                </a>
+<nav class="hidden md:flex items-center gap-6"><a class="text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors font-label-md text-label-md active:scale-95 duration-200 ease-in-out hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-lg px-2 py-1" href="#">Cartelera</a><a class="text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors font-label-md text-label-md active:scale-95 duration-200 ease-in-out hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-lg px-2 py-1" href="#">Calendario</a><a class="text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors font-label-md text-label-md active:scale-95 duration-200 ease-in-out hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-lg px-2 py-1" href="#">Crear Evento</a><a class="text-primary font-bold border-b-2 border-primary pb-1 font-label-md text-label-md active:scale-95 duration-200 ease-in-out" href="#">Mis Inscripciones</a></nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-full active:scale-95 duration-200 ease-in-out"><span class="material-symbols-outlined">notifications</span></button><button class="p-2 text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-full active:scale-95 duration-200 ease-in-out" id="theme-toggle">
+<span class="material-symbols-outlined" id="theme-icon">dark_mode</span>
+</button>
+<div class="hidden md:flex items-center gap-4 pl-4 border-l border-outline-variant/20 dark:border-outline/20">
+<div class="flex items-center gap-2">
+<img class="w-8 h-8 rounded-full object-cover border border-outline-variant" data-alt="A clean, minimalist user profile avatar image, showing a stylized silhouette or abstract geometric face against a dark slate background with a subtle sky blue glow, representing a modern tech user in dark mode." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJpwRB-ayFuTGMRfiqz-rAobqTLdwzTmUBJBRumIwsEQXhoQ4AuMryN6QMKZB_XarUQXnVh80fTCvK72PEWL-b0LMdrYmDw8G1rzwYHbTTQ8oS0M_8JxddGOZ-Uw1H4FfTsYTq4HILekGh7LIHVljiY5gY_aA2eL86zXvT0bYAo3cjXyUPkGGwtpesD10qBRg0Z2ifE9RHEu7TIqXMaJCgv_jdUZg1sMMvXglgmE6Xq4yjrJz9Iiqe"/>
+<span class="font-label-md text-label-md">Hola, Alex</span>
+</div>
+<button class="text-on-surface-variant dark:text-on-surface hover:text-error transition-colors">
+<span class="material-symbols-outlined">logout</span>
+</button>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow w-full px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto pt-16 pb-12 md:pt-24 md:pb-16">
+<header class="mb-10 text-center">
+<h1 class="font-display-lg-mobile text-display-lg-mobile md:font-display-lg md:text-display-lg bg-gradient-to-r from-[#0ea5e9] to-[#0d9488] bg-clip-text text-transparent mb-6 max-w-3xl mx-auto">Mis Inscripciones</h1>
+<p class="text-body-lg font-body-lg text-on-surface-variant">Gestiona tus eventos próximos y accede a tus códigos de entrada.</p>
+</header>
+<!-- Inscriptions Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Card 1 -->
+<article class="group bg-white/80 dark:bg-slate-900/40 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-white/5 overflow-hidden hover:shadow-lg dark:hover:bg-slate-900/60 transition-all duration-300 cursor-pointer" onclick="openModal('modal-1')">
+<div class="h-48 relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A dark, moody concert stage lit with vibrant sky blue and deep slate laser lights cutting through atmospheric fog. The scene is energetic but sophisticated, perfectly fitting a modern tech-forward event platform in dark mode." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA0J0oqFyDA0iV1JYn3GjkO6ZyNsmneRuPmg0-tnn8gBpVcmZJHubHRxLzcbL70bXX__0QOom76q9ecVmHM91-sGplS1liB3f_CpbMH2x4WFLHqyr6XSpuvf_ly763XN91OJqklrd610Zjvo8rIsHQAigKriDQPqwpEtWjnZ-IS_zyN-DByf-Lt_ZDQFQsty2t-nKr3PufCHsMIPyycuTaijiOoAhmJwcEXANkVOOhEBtntzcRx8SNi"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent dark:from-slate-900/90"></div>
+<div class="absolute top-3 right-3 bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full font-label-sm text-label-sm shadow-sm backdrop-blur-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle">check_circle</span>
+                        Confirmado
+                    </div>
+</div>
+<div class="p-5 flex flex-col gap-3">
+<h3 class="font-headline-md text-headline-md text-on-surface dark:text-on-background line-clamp-2 group-hover:text-primary transition-colors">Tech Summit 2024</h3>
+<div class="flex items-center gap-2 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<span class="">15 Nov, 2024 • 09:00 AM</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant font-label-sm text-label-sm mb-2">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+<span class="">Centro de Convenciones, CDMX</span>
+</div>
+<button class="w-full bg-primary-container hover:bg-primary-container/90 text-white rounded-lg py-3 flex justify-center items-center gap-2 transition-colors text-label-md font-label-md mt-auto shadow-sm active:scale-[0.98]">
+<span class="material-symbols-outlined" data-icon="qr_code">qr_code</span>
+                        Ver Entrada
+                    </button>
+</div>
+</article>
+<!-- Card 2 -->
+<article class="group bg-white/80 dark:bg-slate-900/40 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-white/5 overflow-hidden hover:shadow-lg dark:hover:bg-slate-900/60 transition-all duration-300 cursor-pointer" onclick="openModal('modal-2')">
+<div class="h-48 relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A sleek, dimly lit workshop space with modern ergonomic chairs and glowing holographic screens displaying abstract code patterns. The room is accented with cool slate and sky blue ambient lighting, conveying a professional tech workshop environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAi_wXYoN54BzaIfR3HPG10CwJG_JVFYBOTJ5TIV4mpoN_QwRcNhMT_6zaDIib61tEaN-29nyRS8Wpnx0jZ78WuGL8EXH7WzvNGvikOtG79PM2wrSxmeYLc2LtcsMa9ut4jtRZ8YPVCpfFKJ3IycAB5zKFTObPSCv8MrBfCMP5I2n15OgCILWi1uES792thVSQW-BvgJMmPnjMwSX2jubhncvQ-Lciz4JOd9_RdD2Yb5FKrVkUtd5OI"/>
+<div class="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent dark:from-slate-900/90"></div>
+<div class="absolute top-3 right-3 bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full font-label-sm text-label-sm shadow-sm backdrop-blur-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle">check_circle</span>
+                        Confirmado
+                    </div>
+</div>
+<div class="p-5 flex flex-col gap-3">
+<h3 class="font-headline-md text-headline-md text-on-surface dark:text-on-background line-clamp-2 group-hover:text-primary transition-colors">Taller de UX/UI</h3>
+<div class="flex items-center gap-2 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<span class="">22 Nov, 2024 • 16:00 PM</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant font-label-sm text-label-sm mb-2">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+<span class="">Campus Central, Edificio A</span>
+</div>
+<button class="w-full bg-primary-container hover:bg-primary-container/90 text-white rounded-lg py-3 flex justify-center items-center gap-2 transition-colors text-label-md font-label-md mt-auto shadow-sm active:scale-[0.98]">
+<span class="material-symbols-outlined" data-icon="qr_code">qr_code</span>
+                        Ver Entrada
+                    </button>
+</div>
+</article>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full py-8 bg-surface-container-lowest dark:bg-surface-container-lowest border-t border-outline-variant/20 dark:border-outline/10 mt-auto">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
+<div class="flex flex-col items-start gap-4">
+<span class="text-headline-md font-headline-md font-bold text-on-surface">Event Hub</span>
+<p class="text-body-md font-body-md text-primary dark:text-primary-fixed">© 2024 Event Hub. All rights reserved.</p>
+</div>
+<div class="flex flex-wrap items-center md:justify-end gap-6 text-label-sm font-label-sm">
+<a class="text-on-surface-variant hover:text-secondary transition-colors opacity-80 hover:opacity-100" href="#">Privacy Policy</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors opacity-80 hover:opacity-100" href="#">Terms of Service</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors opacity-80 hover:opacity-100" href="#">Help Center</a>
+<a class="text-on-surface-variant hover:text-secondary transition-colors opacity-80 hover:opacity-100" href="#">Contact Us</a>
+</div>
+</div>
+</footer>
+<!-- Modals -->
+<!-- Modal 1 -->
+<div class="fixed inset-0 z-[100] hidden items-center justify-center p-4" id="modal-1">
+<div class="modal-overlay absolute inset-0 transition-opacity" onclick="closeModal('modal-1')"></div>
+<div class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl relative z-10 w-full max-w-md rounded-xl shadow-2xl p-6 sm:p-8 transform transition-all border border-slate-200/50 dark:border-white/10">
+<button class="absolute top-4 right-4 text-on-surface-variant hover:text-primary transition-colors" onclick="closeModal('modal-1')">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+<div class="text-center mb-6">
+<h3 class="text-headline-lg font-headline-lg bg-gradient-to-r from-[#0ea5e9] to-[#0d9488] bg-clip-text text-transparent mb-2">Tech Summit 2024</h3>
+<p class="text-body-md font-body-md text-on-surface-variant">Presenta este código en la entrada</p>
+</div>
+<div class="bg-white p-4 rounded-xl mx-auto w-48 h-48 mb-8 flex items-center justify-center relative overflow-hidden">
+<!-- Fake QR Code Pattern -->
+<div class="absolute inset-2 grid grid-cols-8 gap-1 opacity-80">
+<div class="bg-black col-span-2 row-span-2 rounded-sm"></div>
+<div class="bg-transparent col-span-4 row-span-1"></div>
+<div class="bg-black col-span-2 row-span-2 rounded-sm"></div>
+<div class="bg-black col-span-1 row-span-1 rounded-sm col-start-4"></div>
+<div class="bg-black col-span-1 row-span-1 rounded-sm col-start-5"></div>
+<div class="bg-black col-span-2 row-span-2 rounded-sm row-start-7"></div>
+<div class="bg-transparent col-span-4 row-span-1 col-start-3"></div>
+<div class="bg-black col-span-2 row-span-2 rounded-sm col-start-7 row-start-7"></div>
+<div class="bg-black col-span-1 row-span-1 rounded-sm col-start-4 row-start-4"></div>
+<div class="bg-black col-span-1 row-span-1 rounded-sm col-start-5 row-start-5"></div>
+</div>
+</div>
+<div class="space-y-4">
+<div class="bg-slate-100/50 dark:bg-slate-800/50 rounded-lg p-4 text-center border border-slate-200/50 dark:border-white/5">
+<p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Tu Asiento</p>
+<p class="text-headline-md font-headline-md text-on-surface">General - Fila J</p>
+</div>
+<button class="w-full bg-error/10 hover:bg-error/20 text-error border border-error/30 rounded-xl py-3 flex justify-center items-center gap-2 transition-colors text-label-md font-label-md mt-4">
+<span class="material-symbols-outlined" data-icon="cancel">cancel</span>
+                    Cancelar Asistencia
+                </button>
+</div>
+</div>
+</div>
+<!-- Modal 2 -->
+<div class="fixed inset-0 z-[100] hidden items-center justify-center p-4" id="modal-2">
+<div class="modal-overlay absolute inset-0 transition-opacity" onclick="closeModal('modal-2')"></div>
+<div class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl relative z-10 w-full max-w-md rounded-xl shadow-2xl p-6 sm:p-8 transform transition-all border border-slate-200/50 dark:border-white/10">
+<button class="absolute top-4 right-4 text-on-surface-variant hover:text-primary transition-colors" onclick="closeModal('modal-2')">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+<div class="text-center mb-6">
+<h3 class="text-headline-lg font-headline-lg bg-gradient-to-r from-[#0ea5e9] to-[#0d9488] bg-clip-text text-transparent mb-2">Taller de UX/UI</h3>
+<p class="text-body-md font-body-md text-on-surface-variant">Presenta este código en la entrada</p>
+</div>
+<div class="bg-white p-4 rounded-xl mx-auto w-48 h-48 mb-8 flex items-center justify-center relative overflow-hidden">
+<!-- Fake QR Code Pattern -->
+<div class="absolute inset-2 grid grid-cols-8 gap-1 opacity-80">
+<div class="bg-black col-span-2 row-span-2 rounded-sm"></div>
+<div class="bg-transparent col-span-4 row-span-1"></div>
+<div class="bg-black col-span-2 row-span-2 rounded-sm"></div>
+<div class="bg-black col-span-1 row-span-1 rounded-sm col-start-4"></div>
+<div class="bg-black col-span-1 row-span-1 rounded-sm col-start-5"></div>
+<div class="bg-black col-span-2 row-span-2 rounded-sm row-start-7"></div>
+<div class="bg-transparent col-span-4 row-span-1 col-start-3"></div>
+<div class="bg-black col-span-2 row-span-2 rounded-sm col-start-7 row-start-7"></div>
+<div class="bg-black col-span-1 row-span-1 rounded-sm col-start-4 row-start-4"></div>
+<div class="bg-black col-span-1 row-span-1 rounded-sm col-start-5 row-start-5"></div>
+</div>
+</div>
+<div class="space-y-4">
+<div class="bg-slate-100/50 dark:bg-slate-800/50 rounded-lg p-4 text-center border border-slate-200/50 dark:border-white/5">
+<p class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Mesa Asignada</p>
+<p class="text-headline-md font-headline-md text-on-surface">Mesa 4 - Estación B</p>
+</div>
+<button class="w-full bg-error/10 hover:bg-error/20 text-error border border-error/30 rounded-xl py-3 flex justify-center items-center gap-2 transition-colors text-label-md font-label-md mt-4">
+<span class="material-symbols-outlined" data-icon="cancel">cancel</span>
+                    Cancelar Asistencia
+                </button>
+</div>
+</div>
+</div>
+<script>
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const modals = document.querySelectorAll('[id^="modal-"]');
+                modals.forEach(modal => {
+                    if (!modal.classList.contains('hidden')) {
+                        closeModal(modal.id);
+                    }
+                });
+            }
+        });
+    </script>
+</body></html>

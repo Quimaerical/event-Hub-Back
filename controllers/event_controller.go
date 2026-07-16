@@ -177,7 +177,7 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 
 	slog.Info("Evento creado localmente", "evento_id", input.Evento.ID, "user_id", userID)
 
-	tokenOAuth, err := models.GetGoogleToken(ctx, userID)
+	tokenOAuth, err := models.GetGoogleToken(ctx, int(userID))
 	if err != nil {
 		slog.Warn("Usuario sin token de Google Calendar, omitiendo sincronización", "user_id", userID)
 	} else if ctrl.calendarService != nil {

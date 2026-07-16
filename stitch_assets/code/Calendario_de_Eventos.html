@@ -1,0 +1,380 @@
+<!DOCTYPE html><html lang="es" class="dark" style=""><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=block" rel="stylesheet"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""><link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">try{
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-fixed": "#00201d",
+                        "surface-bright": "#353a3e",
+                        "tertiary-fixed-dim": "#ffb86e",
+                        "inverse-surface": "#dee3e9",
+                        "error-container": "#93000a",
+                        "inverse-on-surface": "#2c3135",
+                        "surface-container-high": "#252b2f",
+                        "on-primary-fixed": "#001e2f",
+                        "on-secondary": "#003732",
+                        "error": "#ffb4ab",
+                        "surface-container-low": "#171c20",
+                        "on-primary-container": "#003751",
+                        "surface-container-lowest": "#0a0f13",
+                        "on-surface": "#dee3e9",
+                        "on-primary": "#00344d",
+                        "secondary-container": "#29a195",
+                        "tertiary": "#ffb86e",
+                        "surface-variant": "#30353a",
+                        "on-background": "#dee3e9",
+                        "on-surface-variant": "#bec8d2",
+                        "on-tertiary-container": "#4d2b00",
+                        "outline-variant": "#3e4850",
+                        "bg-light": "#f8fafc",
+                        "outline": "#88929b",
+                        "on-tertiary-fixed": "#2c1600",
+                        "secondary": "#6bd8cb",
+                        "secondary-fixed-dim": "#6bd8cb",
+                        "on-secondary-fixed-variant": "#005049",
+                        "on-secondary-container": "#00302b",
+                        "on-primary-fixed-variant": "#004c6e",
+                        "muted-slate": "#64748b",
+                        "tertiary-container": "#de8712",
+                        "surface-container": "#1b2024",
+                        "primary-fixed-dim": "#89ceff",
+                        "surface-container-highest": "#30353a",
+                        "primary-fixed": "#c9e6ff",
+                        "surface-tint": "#89ceff",
+                        "surface": "#0f1418",
+                        "bg-dark": "#020617",
+                        "on-error-container": "#ffdad6",
+                        "surface-dim": "#0f1418",
+                        "background": "#0f1418",
+                        "on-tertiary-fixed-variant": "#693c00",
+                        "secondary-fixed": "#89f5e7",
+                        "primary": "#89ceff",
+                        "primary-container": "#0ea5e9",
+                        "on-error": "#690005",
+                        "tertiary-fixed": "#ffdcbd",
+                        "on-tertiary": "#492900",
+                        "inverse-primary": "#006591"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-desktop": "2rem",
+                        "gutter": "1.5rem",
+                        "container-max": "1280px",
+                        "margin-mobile": "1rem"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Outfit"],
+                        "headline-lg": ["Outfit"],
+                        "display-lg": ["Outfit"],
+                        "body-md": ["Outfit"],
+                        "headline-md": ["Outfit"],
+                        "display-lg-mobile": ["Outfit"],
+                        "label-sm": ["Outfit"],
+                        "label-md": ["Outfit"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.25", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "display-lg-mobile": ["36px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "label-sm": ["12px", { "lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "label-md": ["14px", { "lineHeight": "1.4", "letterSpacing": "0.025em", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    }catch(_e){}</script><meta charset="utf-8"></head><body class="bg-bg-dark text-on-surface font-body-md min-h-screen relative overflow-x-hidden selection:bg-primary-container selection:text-white dark:bg-slate-950">
+<!-- Ambient Background Gradients -->
+<div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+<div class="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-primary-container/10 blur-[120px] rounded-full"></div>
+<div class="absolute top-[40%] -right-[10%] w-[40%] h-[60%] bg-secondary-container/10 blur-[150px] rounded-full"></div>
+<div class="absolute -bottom-[20%] left-[20%] w-[60%] h-[40%] bg-primary/5 blur-[100px] rounded-full"></div>
+</div>
+<!-- TopNavBar (Desktop) -->
+<header class="sticky top-0 w-full z-50 bg-surface/40 dark:bg-background/40 backdrop-blur-md border-b border-outline-variant/10 dark:border-outline/5 shadow-sm dark:shadow-none">
+<div class="flex justify-between items-center max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop h-16">
+<div class="flex items-center gap-8">
+<a href="#" class="font-bold text-2xl md:text-3xl bg-gradient-to-r from-[#0ea5e9] to-[#0d9488] bg-clip-text text-transparent active:scale-95 duration-200 ease-in-out">
+                    Event Hub
+                </a>
+<nav class="hidden md:flex items-center gap-6">
+<a href="#" class="text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors font-label-md text-label-md active:scale-95 duration-200 ease-in-out hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-lg px-2 py-1">Cartelera</a>
+<a href="#" class="text-primary font-bold border-b-2 border-primary pb-1 font-label-md text-label-md active:scale-95 duration-200 ease-in-out">Calendario</a>
+<a href="#" class="text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors font-label-md text-label-md active:scale-95 duration-200 ease-in-out hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-lg px-2 py-1">Crear Evento</a>
+<a href="#" class="text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors font-label-md text-label-md active:scale-95 duration-200 ease-in-out hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-lg px-2 py-1">Mis Inscripciones</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-full active:scale-95 duration-200 ease-in-out"><span class="material-symbols-outlined">notifications</span></button>
+<button id="theme-toggle" class="p-2 text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-full active:scale-95 duration-200 ease-in-out">
+<span class="material-symbols-outlined" id="theme-icon">dark_mode</span>
+</button>
+<div class="hidden md:flex items-center gap-4 pl-4 border-l border-outline-variant/20 dark:border-outline/20">
+<div class="flex items-center gap-2">
+<img class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIgQZVAB5thy8MAKNILKtQrMv-Pumej9st5OvqDaGlYlKR9Jg82A4by_zgM1qChvpfwfb8qqFs_VOJbWp8EIVU0G4Gg34OxyZAG5m9VBZuOs09pwehj7CGGRtvdwBa8aStRPGRFvzwcY4ldtsJrls2adcciPHgKanvoYhdw7JaWhsLsHEH_C8jpXGiawjNWQ1p4tvs3RJzstZ2BzgvS1nVTF8ald00F07i1vz-ME5Qtaz7YrKrE2nQ">
+<span class="font-label-md text-label-md">Hola, Alex</span>
+</div>
+<button class="text-on-surface-variant dark:text-on-surface hover:text-error transition-colors">
+<span class="material-symbols-outlined">logout</span>
+</button>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="relative z-10 w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-8 md:py-12 flex flex-col md:flex-row gap-gutter">
+<!-- Left: Calendar Area -->
+<section class="flex-1 flex flex-col gap-6">
+<!-- Calendar Header -->
+<div class="flex items-end justify-between">
+<div>
+<h1 class="font-headline-lg text-headline-lg mb-2 bg-gradient-to-r from-[#0ea5e9] to-[#0d9488] bg-clip-text text-transparent">Octubre 2023</h1>
+<p class="text-on-surface-variant font-body-md text-body-md">Descubre y administra tus eventos planeados.</p>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-high/50 rounded-xl p-1 border border-white/5 backdrop-blur-sm">
+<button class="p-2 rounded-lg hover:bg-white/10 text-on-surface transition-colors">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="px-4 py-2 rounded-lg bg-white/10 text-white font-label-md text-label-md hover:bg-white/20 transition-colors">
+                        Hoy
+                    </button>
+<button class="p-2 rounded-lg hover:bg-white/10 text-on-surface transition-colors">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Glassmorphic Calendar Grid -->
+<div class="bg-white/80 dark:bg-slate-900/40 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-white/5 overflow-hidden p-6 shadow-lg transition-all duration-300">
+<!-- Days of Week -->
+<div class="grid grid-cols-7 mb-4 text-center">
+<span class="text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">Dom</span>
+<span class="text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">Lun</span>
+<span class="text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">Mar</span>
+<span class="text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">Mié</span>
+<span class="text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">Jue</span>
+<span class="text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">Vie</span>
+<span class="text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">Sáb</span>
+</div>
+<!-- Calendar Days (Simulated Oct 2023) -->
+<div class="grid grid-cols-7 gap-2">
+<!-- Previous Month Days -->
+<div class="aspect-square flex flex-col p-2 rounded-xl text-on-surface-variant/30 text-body-md font-body-md items-end">1</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl text-on-surface-variant/30 text-body-md font-body-md items-end">2</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl text-on-surface-variant/30 text-body-md font-body-md items-end">3</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl text-on-surface-variant/30 text-body-md font-body-md items-end">4</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl text-on-surface-variant/30 text-body-md font-body-md items-end">5</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl text-on-surface-variant/30 text-body-md font-body-md items-end">6</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl text-on-surface-variant/30 text-body-md font-body-md items-end">7</div>
+<!-- Current Month Days -->
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">8</span>
+</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">9</span>
+</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">10</span>
+</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">11</span>
+</div>
+<!-- Day with Event (Past) -->
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">12</span>
+<div class="mt-auto flex flex-col gap-1 w-full">
+<div class="w-full h-1.5 bg-muted-slate/50 rounded-full"></div>
+</div>
+</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">13</span>
+</div>
+<!-- Day with-->
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">14</span>
+<div class="mt-auto flex flex-col gap-1 w-full">
+<div class="w-full h-1.5 bg-muted-slate/50 rounded-full"></div>
+</div>
+</div>
+<!-- Selected/Highlighted Day with Events (AI Summit) -->
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-primary/10 border border-primary/30 shadow-[0_0_15px_rgba(14,165,233,0.15)] hover:border-primary/50 transition-all cursor-pointer group relative">
+<span class="text-primary font-bold">15</span>
+<div class="mt-auto flex flex-col gap-1 w-full">
+<div class="w-full h-1.5 bg-primary rounded-full"></div>
+<div class="w-full h-1.5 bg-secondary rounded-full"></div>
+</div>
+</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">16</span>
+</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">17</span>
+</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">18</span>
+</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">19</span>
+</div>
+<!-- Today -->
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-white/5 border border-white/20 hover:border-white/40 hover:bg-white/10 transition-all cursor-pointer group relative">
+<div class="flex items-center justify-center w-6 h-6 bg-white text-bg-dark rounded-full font-bold text-sm mb-auto">20</div>
+</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">21</span>
+</div>
+<!-- Future Event (Neon Nights) -->
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">22</span>
+<div class="mt-auto flex flex-col gap-1 w-full">
+<div class="w-full h-1.5 bg-secondary-container rounded-full shadow-[0_0_8px_rgba(41,161,149,0.5)]"></div>
+</div>
+</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">23</span>
+</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">24</span>
+</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">25</span>
+</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">26</span>
+</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">27</span>
+</div>
+<!-- Future Event -->
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">28</span>
+<div class="mt-auto flex flex-col gap-1 w-full">
+<div class="w-full h-1.5 bg-primary rounded-full"></div>
+</div>
+</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">29</span>
+</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">30</span>
+</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl bg-surface-container/20 border border-white/5 hover:border-white/20 hover:bg-surface-container/40 transition-all cursor-pointer group relative">
+<span class="text-on-surface group-hover:text-white transition-colors">31</span>
+</div>
+<!-- Next Month Days -->
+<div class="aspect-square flex flex-col p-2 rounded-xl text-on-surface-variant/30 text-body-md font-body-md items-end">1</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl text-on-surface-variant/30 text-body-md font-body-md items-end">2</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl text-on-surface-variant/30 text-body-md font-body-md items-end">3</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl text-on-surface-variant/30 text-body-md font-body-md items-end">4</div>
+<div class="aspect-square flex flex-col p-2 rounded-xl text-on-surface-variant/30 text-body-md font-body-md items-end">5</div>
+</div>
+</div>
+</section>
+<!-- Right: Side Panel (Selected-->
+<aside class="w-full md:w-80 lg:w-96 flex flex-col gap-6 mt-8 md:mt-0">
+<div class="flex items-center justify-between pb-2 border-b border-white/10">
+<h2 class="font-headline-md text-headline-md text-white">15 Octubre</h2>
+<span class="text-on-surface-variant font-label-md text-label-md">2 Eventos</span>
+</div>
+<div class="flex flex-col gap-4">
+<!-- Event Card 1 (AI Summit) -->
+<div class="group bg-white/80 dark:bg-slate-900/40 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-white/5 overflow-hidden hover:shadow-lg dark:hover:bg-slate-900/60 transition-all duration-300 flex flex-col">
+<div class="h-2 w-full bg-primary"></div>
+<div class="p-5 flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div class="flex flex-col">
+<span class="text-primary font-label-sm text-label-sm tracking-wider uppercase mb-1">Tecnología</span>
+<h3 class="font-headline-md text-headline-md text-white group-hover:text-primary transition-colors leading-tight">AI &amp; Future Tech Summit</h3>
+</div>
+<button class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-on-surface hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+<div class="flex flex-col gap-2 mt-2">
+<div class="flex items-center gap-2 text-on-surface-variant font-label-md text-label-md">
+<span class="material-symbols-outlined text-[16px]" data-icon="schedule">schedule</span>
+<span class="">09:00 AM - 18:00 PM</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant font-label-md text-label-md">
+<span class="material-symbols-outlined text-[16px]" data-icon="location_on">location_on</span>
+<span class="">Centro de Convenciones Prisma</span>
+</div>
+</div>
+<div class="flex items-center gap-3 mt-4 pt-4 border-t border-white/10">
+<div class="flex -space-x-2">
+<div class="w-7 h-7 rounded-full overflow-hidden border border-slate-900">
+<img alt="Attendee 1" class="w-full h-full object-cover" data-alt="A portrait of a smiling woman in professional attire against a blurred tech-conference background, soft studio lighting, modern corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDN23FzJJND7mCfdx9HredlBHEfA8apiqnJeq1W5w_U5rVhf-W8ul5maj_up-dy5u_KRitWsKQbiZZH8F7YoCEe6Vs7uCLnhmDeTlgvc3tYF79uEXKoVQAwh1yiXa5iqJjzAv5AqbvFz6yt48G9XPVixWyxn-X3IYDGfHlOkK0wXXJh44R2HB4fV6qz2gLSZ0diEhpVoQUQiz6aqTQsjUv1hATYAJgVy4VmAKZbDPILTz_vH8w5L3Wl">
+</div>
+<div class="w-7 h-7 rounded-full overflow-hidden border border-slate-900">
+<img alt="Attendee 2" class="w-full h-full object-cover" data-alt="A portrait of a young man with glasses looking intently, dark background with blue ambient lights, modern tech aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCgfpaFMO9e8YA7tNTjq2baGoG8ImGfxsinkdmthaMEs4ZR3vyNM3VtGRxWDs3Cdw9KMe1l89X1NznrKE8GDlTK58X8RscEKOrlxBwp_L1WYzClUle9TqCdnLHuAKleiqIl6VcXMCWtA5TJf_K-fIHEfv5a1Ypvw2EVBPTmmCTPipnD2G8g3CHMW-dCHQNbp9W5HO9RTjei_MRsAK4So1YCYBgQWk8l-L2YLQbWOCtDOYwLmwj3ZOji">
+</div>
+<div class="w-7 h-7 rounded-full bg-surface-container-high border border-slate-900 flex items-center justify-center text-[10px] text-white font-medium">
+                                    +42
+                                </div>
+</div>
+<span class="text-on-surface-variant font-label-sm text-label-sm">asistirán</span>
+</div>
+</div>
+</div>
+<!-- Event Card 2 (Workshop) -->
+<div class="group bg-white/80 dark:bg-slate-900/40 backdrop-blur-md rounded-xl border border-slate-200/50 dark:border-white/5 overflow-hidden hover:shadow-lg dark:hover:bg-slate-900/60 transition-all duration-300 flex flex-col">
+<div class="h-2 w-full bg-secondary"></div>
+<div class="p-5 flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div class="flex flex-col">
+<span class="text-secondary font-label-sm text-label-sm tracking-wider uppercase mb-1">Workshop</span>
+<h3 class="font-headline-md text-headline-md text-white group-hover:text-secondary transition-colors leading-tight">Diseño de Interfaces Glassmórficas</h3>
+</div>
+<button class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-on-surface hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+<div class="flex flex-col gap-2 mt-2">
+<div class="flex items-center gap-2 text-on-surface-variant font-label-md text-label-md">
+<span class="material-symbols-outlined text-[16px]" data-icon="schedule">schedule</span>
+<span class="">19:30 PM - 21:00 PM</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant font-label-md text-label-md">
+<span class="material-symbols-outlined text-[16px]" data-icon="videocam">videocam</span>
+<span class="">Virtual (Enlace de Zoom)</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Create New Event CTA -->
+<button class="w-full bg-primary-container hover:bg-primary-container/90 text-white rounded-lg py-3 flex justify-center items-center gap-2 transition-colors text-label-md font-label-md mt-4 shadow-sm active:scale-[0.98]">
+<span class="material-symbols-outlined text-[20px]" data-icon="add">add</span>
+                Nuevo Evento el 15 Oct
+            </button>
+</aside>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 rounded-t-xl bg-surface/60 dark:bg-surface-container-highest/60 backdrop-blur-lg border-t border-white/10 shadow-lg">
+<div class="flex justify-around items-center px-4 py-2">
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:bg-primary/10 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="explore">explore</span>
+<span class="font-label-sm text-label-sm-mobile">Explorar</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-xl p-2 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1 filled" data-icon="calendar_month">calendar_month</span>
+<span class="font-label-sm text-label-sm-mobile">Calendario</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:bg-primary/10 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="add_circle">add_circle</span>
+<span class="font-label-sm text-label-sm-mobile">Crear</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:bg-primary/10 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="person">person</span>
+<span class="font-label-sm text-label-sm-mobile">Perfil</span>
+</a>
+</div>
+</nav>
+
+</body></html>

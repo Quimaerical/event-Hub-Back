@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/messaging"
@@ -15,7 +16,12 @@ var FCMClient *messaging.Client
 
 // InitFirebase conecta el backend con el proyecto de la nube
 func InitFirebase() error {
-	// Asegúrate de que este string sea exactamente el nombre que le pusiste a tu archivo descargado
+	// Verificar si el archivo de credenciales existe
+	if _, err := os.Stat("firebase-credentials.json"); os.IsNotExist(err) {
+		slog.Warn("Archivo firebase-credentials.json no encontrado. Firebase Cloud Messaging no se inicializará en este entorno.")
+		return nil
+	}
+
 	opt := option.WithCredentialsFile("firebase-credentials.json") 
 	
 	// Inicializamos la app de Firebase con esa llave
