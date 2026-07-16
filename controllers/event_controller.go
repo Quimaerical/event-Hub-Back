@@ -27,18 +27,20 @@ type visitorLimiter struct {
 }
 
 type EventController struct {
-	geminiService   *services.GeminiService
-	calendarService *services.CalendarService
-	rateLimiters    map[string]*visitorLimiter
-	mu              sync.RWMutex
+	geminiService       *services.GeminiService
+	calendarService     *services.CalendarService
+	notificationService *services.NotificationService // NUEVO: Servicio inyectado
+	rateLimiters        map[string]*visitorLimiter
+	mu                  sync.RWMutex
 }
 
 // Inicialización del controlador con servicios inyectados
-func NewEventController(gemini *services.GeminiService, calendar *services.CalendarService) *EventController {
+func NewEventController(gemini *services.GeminiService, calendar *services.CalendarService, notification *services.NotificationService) *EventController {
 	ctrl := &EventController{
-		geminiService:   gemini,
-		calendarService: calendar,
-		rateLimiters:    make(map[string]*visitorLimiter),
+		geminiService:       gemini,
+		calendarService:     calendar,
+		notificationService: notification,
+		rateLimiters:        make(map[string]*visitorLimiter),
 	}
 	
 	// Lanzar Goroutine en background para evitar Memory Leaks
@@ -181,18 +183,15 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 		slog.Warn("Usuario sin token de Google Calendar, omitiendo sincronización", "user_id", userID)
 	} else if ctrl.calendarService != nil {
 		go func(ev models.Evento, token *oauth2.Token) {
-			// Usamos Background() con Timeout porque el request original terminará pronto
 			bgCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			calID, errCal := ctrl.calendarService.CreateCalendarEvent(bgCtx, token, &ev)
 			if errCal != nil {
-				// Resiliencia: Solo loggeamos, la BD local ya guardó el evento
 				slog.Error("Fallo al sincronizar con Google Calendar", "evento_id", ev.ID, "error", errCal)
 				return
 			}
 			
-			// Actualizamos BD si tuvo éxito
 			_ = models.UpdateCalendarEventID(bgCtx, ev.ID, calID)
 		}(input.Evento, tokenOAuth)
 	}
@@ -302,6 +301,14 @@ func (ctrl *EventController) HandleActualizarEstado(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
+	
+	// Necesitamos obtener el evento antes de actualizarlo para saber quién es el organizador
+	eventoOriginal, err := models.GetEventoByID(ctx, eventoID)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusNotFound, "Evento no encontrado")
+		return
+	}
+
 	err = models.ActualizarEstadoEvento(ctx, eventoID, input.Estado, &aprobadorID, input.Observaciones)
 
 	if err != nil {
@@ -320,6 +327,29 @@ func (ctrl *EventController) HandleActualizarEstado(c *gin.Context) {
 	}
 
 	slog.Info("Estado de evento actualizado", "evento_id", eventoID, "nuevo_estado", input.Estado, "aprobador_id", aprobadorID)
+
+	// NUEVO: Lógica de Notificaciones Push vía Firebase
+	if ctrl.notificationService != nil {
+		fcmToken, errToken := models.GetFCMToken(ctx, eventoOriginal.OrganizadorID)
+		if errToken == nil && fcmToken != "" {
+			// Lanzamos el envío de la notificación en una goroutine para no bloquear la respuesta HTTP
+			go func(token, tituloEvento, nuevoEstado string, idEvento int64) {
+				tituloPush := "Actualización de tu evento"
+				cuerpoPush := fmt.Sprintf("Tu evento '%s' ha cambiado al estado: %s", tituloEvento, strings.ToUpper(nuevoEstado))
+				
+				extraData := map[string]string{
+					"evento_id": fmt.Sprintf("%d", idEvento),
+					"tipo":      "cambio_estado",
+				}
+				
+				// Usamos context.Background() porque la petición original ya respondió
+				_ = ctrl.notificationService.SendDirectNotification(context.Background(), token, tituloPush, cuerpoPush, extraData)
+			}(fcmToken, eventoOriginal.Titulo, input.Estado, eventoID)
+		} else {
+			slog.Info("No se envió notificación push: Organizador sin fcm_token registrado", "organizador_id", eventoOriginal.OrganizadorID)
+		}
+	}
+
 	responderDual(c, http.StatusOK, "events/detail.html",
 		gin.H{"mensaje": "Estado actualizado a: " + input.Estado},
 		gin.H{"mensaje": "Estado actualizado a: " + input.Estado})

@@ -1,13 +1,3 @@
-### Resumen de las integraciones aplicadas:
-
-1. **Extensión y Constraint:** Añadí `CREATE EXTENSION IF NOT EXISTS btree_gist;` al inicio y la restricción `EXCLUDE USING gist` en la sección de reglas de negocio para impedir solapamientos en espacios.
-2. **Auditoría de Usuarios:** Incluí el trigger de auditoría para la tabla `usuarios`.
-3. **Vista Optimizada:** Creé la vista `v_eventos_programados` con el cálculo de reservas (JOIN y GROUP BY) listo para ser consumido.
-4. **Semillas Completas (Seed Data):** Los eventos ahora nacen con su `aprobador_id` y `fecha_aprobacion`, y agregué los INSERTS en la tabla pivote `evento_categorias` para probar la relación N:M.
-
-### Código SQL (`schema.sql`)
-
-```sql
 -- ==========================================
 -- 0. LIMPIEZA INICIAL Y EXTENSIONES
 -- ==========================================
@@ -68,9 +58,11 @@ CREATE TABLE usuarios (
     activo BOOLEAN NOT NULL DEFAULT true,
     oauth_provider VARCHAR(20) DEFAULT 'local',
     oauth_id VARCHAR(100),
-    fecha_registro TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    fecha_registro TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    -- NUEVO: Token de Firebase Cloud Messaging para enviar push notifications al celular
+    fcm_token TEXT 
 );
-COMMENT ON TABLE usuarios IS 'Usuarios del sistema, incluyendo OAuth';
+COMMENT ON TABLE usuarios IS 'Usuarios del sistema, incluyendo OAuth y tokens móviles';
 
 CREATE TABLE categorias (
     id SERIAL PRIMARY KEY,
@@ -355,5 +347,3 @@ INSERT INTO evento_categorias (evento_id, categoria_id) VALUES
 -- Reservas
 INSERT INTO reservas (evento_id, usuario_id, codigo_qr, cantidad_entradas) VALUES 
 (1, (SELECT id FROM usuarios WHERE email = 'estudiante@uc.edu.ve'), 'QR_MOCK_001', 1);
-
-```

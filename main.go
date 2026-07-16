@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"log/slog" // FIX: Importación necesaria para el manejo estructurado de errores de Firebase
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,15 +27,26 @@ func main() {
 	config.ConnectDB()
 	defer config.CloseDB()
 
+	// NUEVO: Conectar a Firebase
+	if err := config.InitFirebase(); err != nil {
+		slog.Error("Fallo crítico al conectar con Firebase", "error", err)
+		// Puedes usar log.Fatal(err) si quieres que el servidor no arranque sin Firebase
+	}
+
 	// 3. Initialize Services
 	geminiSvc := services.NewGeminiService()
 	oauthSvc := services.NewOAuthService()
 	calendarSvc := services.NewCalendarService()
+	notificationSvc := services.NewNotificationService(config.FCMClient)
 
 	// 4. Initialize Controllers
 	dashboardCtrl := controllers.NewDashboardController()
 	authCtrl := controllers.NewAuthController(oauthSvc)
-	eventCtrl := controllers.NewEventController(geminiSvc, calendarSvc)
+	// FIX: Inyectamos notificationSvc al controlador de eventos
+	eventCtrl := controllers.NewEventController(geminiSvc, calendarSvc, notificationSvc)
+
+	// Opcional: Instanciamos el controlador de inscripciones (creado en la rama anterior)
+	// inscripcionCtrl := controllers.NewInscripcionController(calendarSvc)
 
 	// 5. Configure Gin Router
 	router := gin.Default()
@@ -57,6 +69,14 @@ func main() {
 	router.GET("/auth/github/callback", authCtrl.GitHubCallback)
 
 	// 8. Register Protected Routes
+	
+	// Crear un grupo de rutas de perfil/auth que requieren estar logueado
+	perfilProtegido := router.Group("/perfil")
+	perfilProtegido.Use(middlewares.AuthRequired())
+	{
+		perfilProtegido.POST("/fcm-token", authCtrl.HandleUpdateFCMToken)
+	}
+
 	protected := router.Group("/eventos")
 	protected.Use(middlewares.AuthRequired())
 	{
@@ -72,7 +92,13 @@ func main() {
 		// Rutas de actualización y borrado
 		protected.PATCH("/:id/estado", eventCtrl.HandleActualizarEstado)
 		protected.DELETE("/:id", eventCtrl.HandleCancelEvent)
+
+		// Opcional: Aquí habilitarías la ruta de inscripción
+		// protected.POST("/:id/inscribir", inscripcionCtrl.HandleInscribir)
 	}
+
+	// Opcional: Ruta para cancelar inscripciones
+	// router.DELETE("/inscripciones/:id", middlewares.AuthRequired(), inscripcionCtrl.HandleCancelarInscripcion)
 
 	// 9. Start Server
 	port := os.Getenv("PORT")

@@ -10,6 +10,7 @@ event-hub  # Reemplaza con el nombre de tu ejecutable final
 
 # Variables de entorno y credenciales
 .env
+firebase-credentials.json
 
 # Archivos de configuración de IDEs
 .idea/

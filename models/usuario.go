@@ -26,10 +26,14 @@ type Usuario struct {
 	OAuthProvider      string             `json:"oauth_provider"`
 	OAuthID            string             `json:"oauth_id"`
 	CreatedAt          time.Time          `json:"created_at"`
-	// NUEVO: Campos para sincronización con Google Calendar
+	
+	// Campos para sincronización con Google Calendar
 	GoogleAccessToken  pgtype.Text        `json:"-"`
 	GoogleRefreshToken pgtype.Text        `json:"-"`
 	GoogleTokenExpiry  pgtype.Timestamptz `json:"-"`
+	
+	// NUEVO: Campo para Firebase Cloud Messaging (Push Notifications Flutter)
+	FcmToken           pgtype.Text        `json:"fcm_token,omitempty"`
 }
 
 // CreateUsuario inserts a new user, hashing the password if it is local.
@@ -77,15 +81,16 @@ func CreateUsuario(ctx context.Context, u *Usuario) error {
 
 // GetUsuarioByID retrieves a user by ID.
 func GetUsuarioByID(ctx context.Context, id int) (*Usuario, error) {
+	// FIX: Se incluyó fcm_token en el SELECT
 	query := `
-		SELECT id, nombre, email, password_hash, role_id, oauth_provider, oauth_id, created_at
+		SELECT id, nombre, email, password_hash, role_id, oauth_provider, oauth_id, created_at, fcm_token
 		FROM usuarios WHERE id = $1
 	`
 	var u Usuario
 	var passHash *string
 	var oauthID *string
 	err := config.DB.QueryRow(ctx, query, id).Scan(
-		&u.ID, &u.Nombre, &u.Email, &passHash, &u.RoleID, &u.OAuthProvider, &oauthID, &u.CreatedAt,
+		&u.ID, &u.Nombre, &u.Email, &passHash, &u.RoleID, &u.OAuthProvider, &oauthID, &u.CreatedAt, &u.FcmToken,
 	)
 	if err != nil {
 		return nil, err
@@ -101,15 +106,16 @@ func GetUsuarioByID(ctx context.Context, id int) (*Usuario, error) {
 
 // GetUsuarioByEmail retrieves a user by Email.
 func GetUsuarioByEmail(ctx context.Context, email string) (*Usuario, error) {
+	// FIX: Se incluyó fcm_token en el SELECT
 	query := `
-		SELECT id, nombre, email, password_hash, role_id, oauth_provider, oauth_id, created_at
+		SELECT id, nombre, email, password_hash, role_id, oauth_provider, oauth_id, created_at, fcm_token
 		FROM usuarios WHERE email = $1
 	`
 	var u Usuario
 	var passHash *string
 	var oauthID *string
 	err := config.DB.QueryRow(ctx, query, email).Scan(
-		&u.ID, &u.Nombre, &u.Email, &passHash, &u.RoleID, &u.OAuthProvider, &oauthID, &u.CreatedAt,
+		&u.ID, &u.Nombre, &u.Email, &passHash, &u.RoleID, &u.OAuthProvider, &oauthID, &u.CreatedAt, &u.FcmToken,
 	)
 	if err != nil {
 		return nil, err
@@ -125,15 +131,16 @@ func GetUsuarioByEmail(ctx context.Context, email string) (*Usuario, error) {
 
 // GetUsuarioByOAuth retrieves a user by OAuth provider and ID.
 func GetUsuarioByOAuth(ctx context.Context, provider, oauthID string) (*Usuario, error) {
+	// FIX: Se incluyó fcm_token en el SELECT
 	query := `
-		SELECT id, nombre, email, password_hash, role_id, oauth_provider, oauth_id, created_at
+		SELECT id, nombre, email, password_hash, role_id, oauth_provider, oauth_id, created_at, fcm_token
 		FROM usuarios WHERE oauth_provider = $1 AND oauth_id = $2
 	`
 	var u Usuario
 	var passHash *string
 	var oID *string
 	err := config.DB.QueryRow(ctx, query, provider, oauthID).Scan(
-		&u.ID, &u.Nombre, &u.Email, &passHash, &u.RoleID, &u.OAuthProvider, &oID, &u.CreatedAt,
+		&u.ID, &u.Nombre, &u.Email, &passHash, &u.RoleID, &u.OAuthProvider, &oID, &u.CreatedAt, &u.FcmToken,
 	)
 	if err != nil {
 		return nil, err
@@ -163,7 +170,7 @@ func Authenticate(ctx context.Context, email, password string) (*Usuario, error)
 	return u, nil
 }
 
-// NUEVO: GetGoogleToken recupera el token OAuth 2.0 desde PostgreSQL
+// GetGoogleToken recupera el token OAuth 2.0 desde PostgreSQL
 func GetGoogleToken(ctx context.Context, userID int) (*oauth2.Token, error) {
 	query := `
 		SELECT google_access_token, google_refresh_token, google_token_expiry
@@ -199,7 +206,7 @@ func GetGoogleToken(ctx context.Context, userID int) (*oauth2.Token, error) {
 	return token, nil
 }
 
-// NUEVO: SaveGoogleToken guarda o actualiza el token persistente de un usuario tras el Login
+// SaveGoogleToken guarda o actualiza el token persistente de un usuario tras el Login
 func SaveGoogleToken(ctx context.Context, userID int, token *oauth2.Token) error {
 	if token == nil {
 		return errors.New("el token proporcionado es nulo")
@@ -225,4 +232,25 @@ func SaveGoogleToken(ctx context.Context, userID int, token *oauth2.Token) error
 
 	_, err := config.DB.Exec(ctx, query, token.AccessToken, refreshToken, expiry, userID)
 	return err
+}
+
+// NUEVO: UpdateFCMToken actualiza el token del dispositivo del usuario (para notificaciones de Flutter)
+func UpdateFCMToken(ctx context.Context, userID int64, fcmToken string) error {
+	query := `UPDATE usuarios SET fcm_token = $1 WHERE id = $2`
+	_, err := config.DB.Exec(ctx, query, fcmToken, userID)
+	return err
+}
+
+// NUEVO: GetFCMToken recupera el token del dispositivo de un usuario específico
+func GetFCMToken(ctx context.Context, userID int64) (string, error) {
+	query := `SELECT fcm_token FROM usuarios WHERE id = $1 AND fcm_token IS NOT NULL`
+	var token string
+	err := config.DB.QueryRow(ctx, query, userID).Scan(&token)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", errors.New("usuario no tiene un token FCM registrado")
+		}
+		return "", err
+	}
+	return token, nil
 }
