@@ -39,6 +39,10 @@ func main() {
 	calendarSvc := services.NewCalendarService()
 	notificationSvc := services.NewNotificationService(config.FCMClient)
 
+	// NUEVO: Instanciar y arrancar el motor de recordatorios
+	cronSvc := services.NewCronService(notificationSvc)
+	cronSvc.Start()
+
 	// 4. Initialize Controllers
 	dashboardCtrl := controllers.NewDashboardController()
 	authCtrl := controllers.NewAuthController(oauthSvc)
