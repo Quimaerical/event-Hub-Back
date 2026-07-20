@@ -24,17 +24,26 @@ type OAuthUser struct {
 	Provider string `json:"provider"`
 }
 
-// NewOAuthService initializes the configs using environment variables.
-func NewOAuthService() *OAuthService {
-	redirectGoogle := os.Getenv("GOOGLE_REDIRECT_URL")
-	if redirectGoogle == "" {
-		redirectGoogle = "http://localhost:8080/auth/google/callback"
+// getRedirectURL detecta dinámicamente la URL del callback en desarrollo local o en Vercel
+func getRedirectURL(envVar string, callbackPath string) string {
+	if val := os.Getenv(envVar); val != "" {
+		return val
 	}
 
-	redirectGitHub := os.Getenv("GITHUB_REDIRECT_URL")
-	if redirectGitHub == "" {
-		redirectGitHub = "http://localhost:8080/auth/github/callback"
+	if vercelHost := os.Getenv("VERCEL_PROJECT_PRODUCTION_URL"); vercelHost != "" {
+		return "https://" + vercelHost + callbackPath
 	}
+	if vercelHost := os.Getenv("VERCEL_URL"); vercelHost != "" {
+		return "https://" + vercelHost + callbackPath
+	}
+
+	return "http://localhost:8080" + callbackPath
+}
+
+// NewOAuthService initializes the configs using environment variables or dynamic Vercel URLs.
+func NewOAuthService() *OAuthService {
+	redirectGoogle := getRedirectURL("GOOGLE_REDIRECT_URL", "/auth/google/callback")
+	redirectGitHub := getRedirectURL("GITHUB_REDIRECT_URL", "/auth/github/callback")
 
 	googleConfig := &oauth2.Config{
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
