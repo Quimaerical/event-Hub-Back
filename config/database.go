@@ -22,16 +22,24 @@ func ConnectDB() *pgxpool.Pool {
 	once.Do(func() {
 		databaseURL := os.Getenv("DATABASE_URL")
 		if databaseURL == "" {
-			log.Fatal("DATABASE_URL environment variable is not set")
+			databaseURL = os.Getenv("POSTGRES_URL")
+		}
+		if databaseURL == "" {
+			databaseURL = os.Getenv("POSTGRES_PRISMA_URL")
+		}
+
+		if databaseURL == "" {
+			log.Println("ERROR: No se encontró la variable de entorno DATABASE_URL ni POSTGRES_URL")
+			return
 		}
 
 		config, err := pgxpool.ParseConfig(databaseURL)
 		if err != nil {
-			log.Fatalf("Error parsing DATABASE_URL: %v", err)
+			log.Printf("Error al analizar la cadena de conexión de la base de datos: %v", err)
+			return
 		}
 
-		// Neon/Render Connection Pool Optimizations
-		// Neon free tier supports up to 10-20 active connections.
+		// Neon/Vercel Postgres Connection Pool Optimizations
 		config.MaxConns = 8
 		config.MinConns = 2
 		config.MaxConnIdleTime = 15 * time.Minute
@@ -42,17 +50,20 @@ func ConnectDB() *pgxpool.Pool {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		DB, err = pgxpool.NewWithConfig(ctx, config)
+		pool, err := pgxpool.NewWithConfig(ctx, config)
 		if err != nil {
-			log.Fatalf("Error establishing database connection pool: %v", err)
+			log.Printf("Error estableciendo el pool de conexiones a la base de datos: %v", err)
+			return
 		}
 
 		// Verify connection is active
-		if err = DB.Ping(ctx); err != nil {
-			log.Fatalf("Database ping failed: %v", err)
+		if err = pool.Ping(ctx); err != nil {
+			log.Printf("Petición de Ping a la base de datos fallida: %v", err)
+			return
 		}
 
-		log.Println("Database connection pool successfully established")
+		DB = pool
+		log.Println("Pool de conexiones a PostgreSQL establecido exitosamente")
 	})
 
 	return DB
