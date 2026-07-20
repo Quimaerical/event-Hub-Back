@@ -48,11 +48,9 @@ func main() {
 	// 4. Initialize Controllers
 	dashboardCtrl := controllers.NewDashboardController()
 	authCtrl := controllers.NewAuthController(oauthSvc)
-	// FIX: Inyectamos notificationSvc al controlador de eventos
 	eventCtrl := controllers.NewEventController(geminiSvc, calendarSvc, notificationSvc)
-
-	// Opcional: Instanciamos el controlador de inscripciones (creado en la rama anterior)
-	// inscripcionCtrl := controllers.NewInscripcionController(calendarSvc)
+	profileCtrl := controllers.NewProfileController()
+	tablonCtrl := controllers.NewTablonController()
 
 	// 5. Configure Gin Router
 	router := gin.Default()
@@ -60,8 +58,9 @@ func main() {
 	// 6. Load HTML Templates recursively
 	loadTemplates(router)
 
-	// 7. Register Public Routes
+	// 7. Register Public & Semi-Public Routes
 	router.GET("/", middlewares.CurrentUser(), dashboardCtrl.ShowDashboard)
+	router.GET("/eventos/:id", middlewares.CurrentUser(), eventCtrl.HandleGetEvent)
 	router.GET("/login", authCtrl.ShowLogin)
 	router.POST("/login", authCtrl.HandleLogin)
 	router.GET("/register", authCtrl.ShowRegister)
@@ -75,11 +74,15 @@ func main() {
 	router.GET("/auth/github/callback", authCtrl.GitHubCallback)
 
 	// 8. Register Protected Routes
-	
-	// Crear un grupo de rutas de perfil/auth que requieren estar logueado
+	router.GET("/tablon", middlewares.AuthRequired(), tablonCtrl.ShowTablon)
+
+	// Grupo de rutas de perfil que requieren estar logueado
 	perfilProtegido := router.Group("/perfil")
 	perfilProtegido.Use(middlewares.AuthRequired())
 	{
+		perfilProtegido.GET("", profileCtrl.ShowProfile)
+		perfilProtegido.POST("", profileCtrl.UpdateProfile)
+		perfilProtegido.POST("/password", profileCtrl.UpdatePassword)
 		perfilProtegido.POST("/fcm-token", authCtrl.HandleUpdateFCMToken)
 	}
 
@@ -91,20 +94,23 @@ func main() {
 		protected.POST("/crear", eventCtrl.HandleCreate)
 		protected.POST("/sugerir-descripcion", eventCtrl.SuggestDescription)
 
-		// Rutas de colección y detalle
+		// Rutas de colección
 		protected.GET("/", eventCtrl.HandleListEvents)
-		protected.GET("/:id", eventCtrl.HandleGetEvent)
+
+		// Rutas de inscripción y reserva
+		protected.POST("/:id/inscribir", eventCtrl.HandleInscribirEvent)
+		protected.POST("/:id/cancelar-inscripcion", eventCtrl.HandleCancelarInscripcion)
+
+		// Rutas de edición y administración
+		protected.GET("/:id/editar", eventCtrl.ShowEdit)
+		protected.POST("/:id/editar", eventCtrl.HandleEdit)
+		protected.POST("/:id/aprobar", eventCtrl.HandleAprobarEvent)
+		protected.POST("/:id/rechazar", eventCtrl.HandleRechazarEvent)
 
 		// Rutas de actualización y borrado
 		protected.PATCH("/:id/estado", eventCtrl.HandleActualizarEstado)
 		protected.DELETE("/:id", eventCtrl.HandleCancelEvent)
-
-		// Opcional: Aquí habilitarías la ruta de inscripción
-		// protected.POST("/:id/inscribir", inscripcionCtrl.HandleInscribir)
 	}
-
-	// Opcional: Ruta para cancelar inscripciones
-	// router.DELETE("/inscripciones/:id", middlewares.AuthRequired(), inscripcionCtrl.HandleCancelarInscripcion)
 
 	// 9. Start Server
 	port := os.Getenv("PORT")

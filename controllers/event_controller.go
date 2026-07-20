@@ -16,6 +16,8 @@ import (
 	"event-hub/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/oauth2"
 	"golang.org/x/time/rate"
 )
@@ -120,35 +122,95 @@ func (ctrl *EventController) ShowCreate(c *gin.Context) {
 		return
 	}
 
+	espacios, err := models.GetAllEspacios(ctx)
+	if err != nil {
+		slog.Error("Error al cargar espacios", "error", err)
+		manejarErrorWeb(c, http.StatusInternalServerError, "events/create.html", "Error al cargar los espacios", gin.H{})
+		return
+	}
+
 	userID, _ := c.Get("userID")
 	email, _ := c.Get("email")
 
 	responderDual(c, http.StatusOK, "events/create.html",
-		gin.H{"categorias": categories, "userID": userID, "email": email},
-		gin.H{"categorias": categories, "userID": userID, "email": email},
+		gin.H{"categorias": categories, "espacios": espacios, "userID": userID, "email": email},
+		gin.H{"categorias": categories, "espacios": espacios, "userID": userID, "email": email},
 	)
 }
 
 func (ctrl *EventController) HandleCreate(c *gin.Context) {
-	var input struct {
-		models.Evento
-		Categorias []int `form:"categorias" json:"categorias" binding:"required,min=1"`
+	ctx := c.Request.Context()
+	categories, _ := models.GetAllCategorias(ctx)
+	espacios, _ := models.GetAllEspacios(ctx)
+
+	var form struct {
+		Titulo          string `form:"titulo" json:"titulo" binding:"required"`
+		Descripcion     string `form:"descripcion" json:"descripcion" binding:"required"`
+		EspacioID       int    `form:"espacio_id" json:"espacio_id" binding:"required"`
+		FechaInicioStr  string `form:"fecha_inicio" json:"fecha_inicio" binding:"required"`
+		FechaFinStr     string `form:"fecha_fin" json:"fecha_fin" binding:"required"`
+		CapacidadMaxima int    `form:"capacidad_maxima" json:"capacidad_maxima" binding:"required,gt=0"`
+		Categorias      []int  `form:"categorias" json:"categorias" binding:"required,min=1"`
 	}
 
-	if err := c.ShouldBind(&input); err != nil {
+	var err error
+	if strings.Contains(c.ContentType(), "application/json") {
+		err = c.ShouldBindWith(&form, binding.JSON)
+	} else {
+		err = c.ShouldBindWith(&form, binding.Form)
+	}
+
+	if err != nil {
 		slog.Warn("Intento de creación con datos inválidos", "error", err)
 		responderDual(c, http.StatusBadRequest, "events/create.html",
 			gin.H{"error": "Datos inválidos: " + err.Error()},
-			gin.H{"error": "Datos inválidos: " + err.Error()},
+			gin.H{"error": "Por favor selecciona al menos una categoría y completa todos los campos", "categorias": categories, "espacios": espacios},
 		)
 		return
 	}
 
-	if !input.Evento.FechaFin.After(input.Evento.FechaInicio) {
-		slog.Warn("Intento de creación con fechas incoherentes", "fecha_inicio", input.Evento.FechaInicio, "fecha_fin", input.Evento.FechaFin)
+	// Parse datetime-local string inputs preserving local timezone and exact hours/minutes
+	parseDate := func(s string) (time.Time, error) {
+		formats := []string{
+			"2006-01-02T15:04",
+			"2006-01-02T15:04:05",
+			time.RFC3339,
+		}
+		for _, f := range formats {
+			if t, err := time.ParseInLocation(f, s, time.Local); err == nil {
+				return t, nil
+			}
+		}
+		return time.Time{}, fmt.Errorf("formato de fecha inválido: %s", s)
+	}
+
+	fechaInicio, err := parseDate(form.FechaInicioStr)
+	if err != nil {
 		responderDual(c, http.StatusBadRequest, "events/create.html",
-			gin.H{"error": "La fecha de fin debe ser posterior a la fecha de inicio"},
-			gin.H{"error": "La fecha de fin debe ser posterior a la fecha de inicio"},
+			gin.H{"error": err.Error()},
+			gin.H{"error": "Formato de fecha de inicio inválido", "categorias": categories, "espacios": espacios},
+		)
+		return
+	}
+
+	fechaFin, err := parseDate(form.FechaFinStr)
+	if err != nil {
+		responderDual(c, http.StatusBadRequest, "events/create.html",
+			gin.H{"error": err.Error()},
+			gin.H{"error": "Formato de fecha de fin inválido", "categorias": categories, "espacios": espacios},
+		)
+		return
+	}
+
+	if !fechaFin.After(fechaInicio) {
+		msg := fmt.Sprintf("La fecha y hora de fin (%s) debe ser posterior a la de inicio (%s). Si tu evento termina en la madrugada o al día siguiente, recuerda cambiar el día en la fecha de fin.",
+			fechaFin.Format("02/01/2006 03:04 PM"),
+			fechaInicio.Format("02/01/2006 03:04 PM"),
+		)
+		slog.Warn("Intento de creación con fechas incoherentes", "fecha_inicio", fechaInicio, "fecha_fin", fechaFin)
+		responderDual(c, http.StatusBadRequest, "events/create.html",
+			gin.H{"error": msg},
+			gin.H{"error": msg, "categorias": categories, "espacios": espacios},
 		)
 		return
 	}
@@ -159,23 +221,31 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 		manejarErrorAPI(c, http.StatusUnauthorized, err.Error())
 		return
 	}
-	input.Evento.OrganizadorID = userID
 
-	ctx := c.Request.Context()
-	err = models.CreateEvento(ctx, &input.Evento, input.Categorias)
+	evento := models.Evento{
+		Titulo:          form.Titulo,
+		Descripcion:     pgtype.Text{String: form.Descripcion, Valid: form.Descripcion != ""},
+		EspacioID:       form.EspacioID,
+		OrganizadorID:   userID,
+		FechaInicio:     fechaInicio,
+		FechaFin:        fechaFin,
+		CapacidadMaxima: form.CapacidadMaxima,
+	}
+
+	err = models.CreateEvento(ctx, &evento, form.Categorias)
 
 	if err != nil {
 		if errors.Is(err, models.ErrEspacioOcupado) {
-			slog.Warn("Conflicto de espacio ocupado", "user_id", userID, "espacio_id", input.EspacioID)
-			responderDual(c, http.StatusConflict, "events/create.html", gin.H{"error": err.Error()}, gin.H{"error": err.Error()})
+			slog.Warn("Conflicto de espacio ocupado", "user_id", userID, "espacio_id", form.EspacioID)
+			responderDual(c, http.StatusConflict, "events/create.html", gin.H{"error": err.Error()}, gin.H{"error": err.Error(), "categorias": categories, "espacios": espacios})
 			return
 		}
 		slog.Error("Error interno al crear evento", "error", err, "user_id", userID)
-		responderDual(c, http.StatusInternalServerError, "events/create.html", gin.H{"error": "Error interno al guardar"}, gin.H{"error": "Error interno"})
+		responderDual(c, http.StatusInternalServerError, "events/create.html", gin.H{"error": "Error interno al guardar"}, gin.H{"error": "Error interno al guardar el evento", "categorias": categories, "espacios": espacios})
 		return
 	}
 
-	slog.Info("Evento creado localmente", "evento_id", input.Evento.ID, "user_id", userID)
+	slog.Info("Evento creado localmente", "evento_id", evento.ID, "user_id", userID)
 
 	tokenOAuth, err := models.GetGoogleToken(ctx, int(userID))
 	if err != nil {
@@ -192,13 +262,14 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 			}
 			
 			_ = models.UpdateCalendarEventID(bgCtx, ev.ID, calID)
-		}(input.Evento, tokenOAuth)
+		}(evento, tokenOAuth)
 	}
 
 	if strings.Contains(c.GetHeader("Accept"), "application/json") {
-		c.JSON(http.StatusCreated, gin.H{"message": "Evento creado", "evento": input.Evento})
+		c.JSON(http.StatusCreated, gin.H{"message": "Evento creado", "evento": evento})
 		return
 	}
+
 	c.Redirect(http.StatusSeeOther, "/")
 }
 
@@ -261,7 +332,348 @@ func (ctrl *EventController) HandleGetEvent(c *gin.Context) {
 		return
 	}
 
-	responderDual(c, http.StatusOK, "events/detail.html", gin.H{"evento": evento}, gin.H{"evento": evento})
+	// Obtener categorías del evento
+	categorias, _ := models.GetCategoriasForEvento(ctx, eventoID)
+	evento.Categorias = categorias
+
+	// Conteo de inscritos y disponibilidad de cupos
+	conteoInscritos, _ := models.GetConteoInscritos(ctx, eventoID)
+	cuposDisponibles := evento.CapacidadMaxima - conteoInscritos
+	if cuposDisponibles < 0 {
+		cuposDisponibles = 0
+	}
+
+	// Comprobar estado de autenticación y rol del usuario
+	var userID int64
+	var roleID int
+	if uVal, exists := c.Get("userID"); exists {
+		if id, ok := uVal.(int64); ok {
+			userID = id
+		}
+	}
+	if rVal, exists := c.Get("role_id"); exists {
+		if r, ok := rVal.(int); ok {
+			roleID = r
+		}
+	}
+
+	esCreador := userID > 0 && evento.OrganizadorID == userID
+	esAdminOrApprover := roleID == 1 || roleID == 2
+
+	// Si el evento está en estado 'solicitado', solo es visible para su creador y admin/aprobador
+	if evento.Estado == models.EstadoSolicitado && !esCreador && !esAdminOrApprover {
+		responderDual(c, http.StatusForbidden, "events/detail.html",
+			gin.H{"error": "Este evento aún está en revisión y no es público"},
+			gin.H{"error": "Este evento aún está pendiente de aprobación por la administración"})
+		return
+	}
+
+	// Verificar si el usuario actual está inscrito
+	var estaInscrito bool
+	if userID > 0 {
+		estaInscrito, _ = models.EstaInscrito(ctx, eventoID, userID)
+	}
+
+	email, _ := c.Get("email")
+
+	data := gin.H{
+		"evento":            evento,
+		"categorias":        categorias,
+		"conteoInscritos":   conteoInscritos,
+		"cuposDisponibles":  cuposDisponibles,
+		"estaInscrito":      estaInscrito,
+		"esCreador":         esCreador,
+		"esAdminOrApprover": esAdminOrApprover,
+		"userID":            userID,
+		"email":             email,
+	}
+
+	responderDual(c, http.StatusOK, "events/detail.html", data, data)
+}
+
+func (ctrl *EventController) HandleInscribirEvent(c *gin.Context) {
+	eventoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusBadRequest, "ID de evento inválido")
+		return
+	}
+
+	userID, err := extractUserID(c)
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	emailVal, _ := c.Get("email")
+	emailStr, _ := emailVal.(string)
+
+	ctx := c.Request.Context()
+	_, err = models.InscribirUsuario(ctx, eventoID, userID, emailStr)
+	if err != nil {
+		slog.Warn("Fallo al inscribir usuario", "evento_id", eventoID, "user_id", userID, "error", err)
+		if errors.Is(err, models.ErrUsuarioYaInscrito) || errors.Is(err, models.ErrCupoCompleto) || errors.Is(err, models.ErrEventoNoInscribible) {
+			responderDual(c, http.StatusBadRequest, "events/detail.html", gin.H{"error": err.Error()}, gin.H{"error": err.Error()})
+			return
+		}
+		responderDual(c, http.StatusInternalServerError, "events/detail.html", gin.H{"error": "Error interno al procesar la reserva"}, gin.H{"error": "Error interno al procesar tu inscripción"})
+		return
+	}
+
+	slog.Info("Inscripción exitosa", "evento_id", eventoID, "user_id", userID)
+	if strings.Contains(c.GetHeader("Accept"), "application/json") {
+		c.JSON(http.StatusOK, gin.H{"message": "Inscripción confirmada"})
+		return
+	}
+	c.Redirect(http.StatusSeeOther, fmt.Sprintf("/eventos/%d", eventoID))
+}
+
+func (ctrl *EventController) HandleCancelarInscripcion(c *gin.Context) {
+	eventoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusBadRequest, "ID de evento inválido")
+		return
+	}
+
+	userID, err := extractUserID(c)
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	ctx := c.Request.Context()
+	err = models.CancelarInscripcionPorEventoYUsuario(ctx, eventoID, userID)
+	if err != nil {
+		slog.Warn("Fallo al cancelar reserva", "evento_id", eventoID, "user_id", userID, "error", err)
+		responderDual(c, http.StatusBadRequest, "events/detail.html", gin.H{"error": err.Error()}, gin.H{"error": "No se pudo cancelar la inscripción"})
+		return
+	}
+
+	slog.Info("Inscripción cancelada", "evento_id", eventoID, "user_id", userID)
+	if strings.Contains(c.GetHeader("Accept"), "application/json") {
+		c.JSON(http.StatusOK, gin.H{"message": "Inscripción cancelada"})
+		return
+	}
+	c.Redirect(http.StatusSeeOther, fmt.Sprintf("/eventos/%d", eventoID))
+}
+
+func (ctrl *EventController) HandleAprobarEvent(c *gin.Context) {
+	eventoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusBadRequest, "ID de evento inválido")
+		return
+	}
+
+	userID, err := extractUserID(c)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusUnauthorized, "Autenticación requerida")
+		return
+	}
+
+	ctx := c.Request.Context()
+	err = models.ActualizarEstadoEvento(ctx, eventoID, models.EstadoAprobado, &userID, "Aprobado por administración")
+	if err != nil {
+		slog.Error("Error al aprobar evento", "evento_id", eventoID, "error", err)
+		responderDual(c, http.StatusBadRequest, "events/detail.html", gin.H{"error": err.Error()}, gin.H{"error": "No se pudo aprobar el evento: " + err.Error()})
+		return
+	}
+
+	slog.Info("Evento aprobado exitosamente", "evento_id", eventoID, "aprobador_id", userID)
+	if strings.Contains(c.GetHeader("Accept"), "application/json") {
+		c.JSON(http.StatusOK, gin.H{"message": "Evento aprobado exitosamente"})
+		return
+	}
+	c.Redirect(http.StatusSeeOther, fmt.Sprintf("/eventos/%d", eventoID))
+}
+
+func (ctrl *EventController) HandleRechazarEvent(c *gin.Context) {
+	eventoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusBadRequest, "ID de evento inválido")
+		return
+	}
+
+	userID, err := extractUserID(c)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusUnauthorized, "Autenticación requerida")
+		return
+	}
+
+	observaciones := c.PostForm("observaciones")
+	if observaciones == "" {
+		observaciones = "Rechazado por administración"
+	}
+
+	ctx := c.Request.Context()
+	err = models.ActualizarEstadoEvento(ctx, eventoID, models.EstadoRechazado, &userID, observaciones)
+	if err != nil {
+		slog.Error("Error al rechazar evento", "evento_id", eventoID, "error", err)
+		responderDual(c, http.StatusBadRequest, "events/detail.html", gin.H{"error": err.Error()}, gin.H{"error": "No se pudo rechazar el evento: " + err.Error()})
+		return
+	}
+
+	slog.Info("Evento rechazado", "evento_id", eventoID, "aprobador_id", userID)
+	if strings.Contains(c.GetHeader("Accept"), "application/json") {
+		c.JSON(http.StatusOK, gin.H{"message": "Evento rechazado"})
+		return
+	}
+	c.Redirect(http.StatusSeeOther, fmt.Sprintf("/eventos/%d", eventoID))
+}
+
+func (ctrl *EventController) ShowEdit(c *gin.Context) {
+	eventoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/")
+		return
+	}
+
+	userID, err := extractUserID(c)
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+
+	ctx := c.Request.Context()
+	evento, err := models.GetEventoByID(ctx, eventoID)
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/")
+		return
+	}
+
+	rolNombre, _ := c.Get("role_nombre")
+	esAdmin := rolNombre != nil && (rolNombre.(string) == "administrador" || rolNombre.(string) == "aprobador")
+	if evento.OrganizadorID != userID && !esAdmin {
+		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/eventos/%d", eventoID))
+		return
+	}
+
+	categories, _ := models.GetAllCategorias(ctx)
+	espacios, _ := models.GetAllEspacios(ctx)
+	eventoCat, _ := models.GetCategoriasForEvento(ctx, eventoID)
+
+	catMap := make(map[int]bool)
+	for _, c := range eventoCat {
+		catMap[c.ID] = true
+	}
+
+	email, _ := c.Get("email")
+	responderDual(c, http.StatusOK, "events/edit.html",
+		gin.H{"evento": evento, "categorias": categories, "espacios": espacios},
+		gin.H{
+			"evento":           evento,
+			"categorias":       categories,
+			"espacios":         espacios,
+			"catMap":           catMap,
+			"fecha_inicio_str": evento.FechaInicio.Format("2006-01-02T15:04"),
+			"fecha_fin_str":    evento.FechaFin.Format("2006-01-02T15:04"),
+			"userID":           userID,
+			"email":            email,
+		},
+	)
+}
+
+func (ctrl *EventController) HandleEdit(c *gin.Context) {
+	eventoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusBadRequest, "ID inválido")
+		return
+	}
+
+	userID, err := extractUserID(c)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusUnauthorized, "Autenticación requerida")
+		return
+	}
+
+	ctx := c.Request.Context()
+	eventoOriginal, err := models.GetEventoByID(ctx, eventoID)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusNotFound, "Evento no encontrado")
+		return
+	}
+
+	rolNombre, _ := c.Get("role_nombre")
+	esAdmin := rolNombre != nil && (rolNombre.(string) == "administrador" || rolNombre.(string) == "aprobador")
+	if eventoOriginal.OrganizadorID != userID && !esAdmin {
+		manejarErrorAPI(c, http.StatusForbidden, "No tienes permiso para editar este evento")
+		return
+	}
+
+	categories, _ := models.GetAllCategorias(ctx)
+	espacios, _ := models.GetAllEspacios(ctx)
+
+	var form struct {
+		Titulo          string `form:"titulo" json:"titulo" binding:"required"`
+		Descripcion     string `form:"descripcion" json:"descripcion" binding:"required"`
+		EspacioID       int    `form:"espacio_id" json:"espacio_id" binding:"required"`
+		FechaInicioStr  string `form:"fecha_inicio" json:"fecha_inicio" binding:"required"`
+		FechaFinStr     string `form:"fecha_fin" json:"fecha_fin" binding:"required"`
+		CapacidadMaxima int    `form:"capacidad_maxima" json:"capacidad_maxima" binding:"required,gt=0"`
+		Categorias      []int  `form:"categorias" json:"categorias" binding:"required,min=1"`
+	}
+
+	if strings.Contains(c.ContentType(), "application/json") {
+		err = c.ShouldBindWith(&form, binding.JSON)
+	} else {
+		err = c.ShouldBindWith(&form, binding.Form)
+	}
+
+	if err != nil {
+		responderDual(c, http.StatusBadRequest, "events/edit.html",
+			gin.H{"error": "Datos inválidos: " + err.Error()},
+			gin.H{"error": "Por favor completa todos los campos correctamente", "evento": eventoOriginal, "categorias": categories, "espacios": espacios},
+		)
+		return
+	}
+
+	parseDate := func(s string) (time.Time, error) {
+		formats := []string{"2006-01-02T15:04", "2006-01-02T15:04:05", time.RFC3339}
+		for _, f := range formats {
+			if t, err := time.ParseInLocation(f, s, time.Local); err == nil {
+				return t, nil
+			}
+		}
+		return time.Time{}, fmt.Errorf("formato de fecha inválido: %s", s)
+	}
+
+	fechaInicio, err := parseDate(form.FechaInicioStr)
+	if err != nil {
+		responderDual(c, http.StatusBadRequest, "events/edit.html", gin.H{"error": err.Error()}, gin.H{"error": "Fecha de inicio inválida", "evento": eventoOriginal, "categorias": categories, "espacios": espacios})
+		return
+	}
+
+	fechaFin, err := parseDate(form.FechaFinStr)
+	if err != nil {
+		responderDual(c, http.StatusBadRequest, "events/edit.html", gin.H{"error": err.Error()}, gin.H{"error": "Fecha de fin inválida", "evento": eventoOriginal, "categorias": categories, "espacios": espacios})
+		return
+	}
+
+	if !fechaFin.After(fechaInicio) {
+		msg := "La fecha y hora de fin debe ser posterior a la de inicio"
+		responderDual(c, http.StatusBadRequest, "events/edit.html", gin.H{"error": msg}, gin.H{"error": msg, "evento": eventoOriginal, "categorias": categories, "espacios": espacios})
+		return
+	}
+
+	eventoOriginal.Titulo = form.Titulo
+	eventoOriginal.Descripcion = pgtype.Text{String: form.Descripcion, Valid: form.Descripcion != ""}
+	eventoOriginal.EspacioID = form.EspacioID
+	eventoOriginal.FechaInicio = fechaInicio
+	eventoOriginal.FechaFin = fechaFin
+	eventoOriginal.CapacidadMaxima = form.CapacidadMaxima
+
+	err = models.UpdateEvento(ctx, eventoOriginal, form.Categorias)
+	if err != nil {
+		slog.Error("Error al actualizar evento", "evento_id", eventoID, "error", err)
+		responderDual(c, http.StatusInternalServerError, "events/edit.html", gin.H{"error": "Error interno al guardar cambios"}, gin.H{"error": "Error al guardar cambios: " + err.Error(), "evento": eventoOriginal, "categorias": categories, "espacios": espacios})
+		return
+	}
+
+	slog.Info("Evento actualizado exitosamente", "evento_id", eventoID, "user_id", userID)
+	if strings.Contains(c.GetHeader("Accept"), "application/json") {
+		c.JSON(http.StatusOK, gin.H{"message": "Evento actualizado exitosamente", "evento": eventoOriginal})
+		return
+	}
+
+	c.Redirect(http.StatusSeeOther, fmt.Sprintf("/eventos/%d", eventoID))
 }
 
 // ==========================================

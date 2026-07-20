@@ -33,26 +33,42 @@ func (s *GeminiService) GenerateText(ctx context.Context, prompt string) (string
 	}
 	defer client.Close()
 
-	// Use gemini-2.5-flash for fast and cost-effective generation.
-	model := client.GenerativeModel("gemini-2.5-flash")
-	
-	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
-	if err != nil {
-		return "", fmt.Errorf("failed to generate content from Gemini API: %w", err)
+	// Modelos válidos en la API Gratuita de Google Gemini:
+	// 1. "gemini-3.1-flash-lite" (Predeterminado: Suelo de precios, ideal para resúmenes cortos y mensajes rápidos)
+	// 2. "gemini-1.5-flash"      (Modelo flash altamente compatible)
+	// 3. "gemini-2.0-flash"      (Versión flash rápida)
+	modelName := os.Getenv("GEMINI_MODEL")
+	if modelName == "" {
+		modelName = "gemini-3.1-flash-lite"
 	}
 
-	if len(resp.Candidates) == 0 || resp.Candidates[0].Content == nil || len(resp.Candidates[0].Content.Parts) == 0 {
-		return "", fmt.Errorf("no response candidate returned from Gemini")
-	}
+	modelsToTry := []string{modelName, "gemini-3.1-flash-lite", "gemini-1.5-flash", "gemini-2.0-flash"}
+	visited := make(map[string]bool)
+	var lastErr error
 
-	var result string
-	for _, part := range resp.Candidates[0].Content.Parts {
-		if textPart, ok := part.(genai.Text); ok {
-			result += string(textPart)
+	for _, mName := range modelsToTry {
+		if visited[mName] {
+			continue
+		}
+		visited[mName] = true
+
+		model := client.GenerativeModel(mName)
+		resp, err := model.GenerateContent(ctx, genai.Text(prompt))
+		if err == nil && len(resp.Candidates) > 0 && resp.Candidates[0].Content != nil && len(resp.Candidates[0].Content.Parts) > 0 {
+			var result string
+			for _, part := range resp.Candidates[0].Content.Parts {
+				if textPart, ok := part.(genai.Text); ok {
+					result += string(textPart)
+				}
+			}
+			return result, nil
+		}
+		if err != nil {
+			lastErr = err
 		}
 	}
 
-	return result, nil
+	return "", fmt.Errorf("failed to generate content from Gemini API: %w", lastErr)
 }
 
 // SuggestEventDescription leverages Gemini to generate an attractive description for a given event and location.

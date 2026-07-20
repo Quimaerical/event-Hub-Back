@@ -46,11 +46,29 @@ func (ctrl *DashboardController) ShowDashboard(c *gin.Context) {
 
 	ctx := c.Request.Context()
 
+	var currentUserID int64
+	if uVal, exists := c.Get("userID"); exists {
+		if id, ok := uVal.(int64); ok {
+			currentUserID = id
+		}
+	}
+
+	var isAdminOrApprover bool
+	if rVal, exists := c.Get("role_id"); exists {
+		if roleID, ok := rVal.(int); ok {
+			if roleID == 1 || roleID == 2 {
+				isAdminOrApprover = true
+			}
+		}
+	}
+
 	filtro := models.FiltroEvento{
-		Search:     searchQuery,
-		CategoryID: categoryID,
-		Page:       page,
-		Limit:      limit,
+		Search:            searchQuery,
+		CategoryID:        categoryID,
+		UserID:            currentUserID,
+		IsAdminOrApprover: isAdminOrApprover,
+		Page:              page,
+		Limit:             limit,
 	}
 
 	// Query events (indexed search and filter category)
