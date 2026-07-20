@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"math"
 	"net/http"
 	"strconv"
@@ -50,6 +51,8 @@ func (ctrl *DashboardController) ShowDashboard(c *gin.Context) {
 	if uVal, exists := c.Get("userID"); exists {
 		if id, ok := uVal.(int64); ok {
 			currentUserID = id
+		} else if idInt, ok := uVal.(int); ok {
+			currentUserID = int64(idInt)
 		}
 	}
 
@@ -71,22 +74,25 @@ func (ctrl *DashboardController) ShowDashboard(c *gin.Context) {
 		Limit:             limit,
 	}
 
+	var dbErrorMessage string
+
 	// Query events (indexed search and filter category)
 	events, totalCount, err := models.SearchEventos(ctx, filtro)
 	if err != nil {
-		c.HTML(http.StatusInternalServerError, "dashboard/index.html", gin.H{
-			"error": "Error al recuperar los eventos de la base de datos",
-		})
-		return
+		log.Printf("Aviso en ShowDashboard (SearchEventos): %v", err)
+		dbErrorMessage = "La base de datos se está reactivando o no tiene tablas registradas aún."
+		events = []models.Evento{}
+		totalCount = 0
 	}
 
 	// Fetch all categories for filter component
-	categories, err := models.GetAllCategorias(ctx)
-	if err != nil {
-		c.HTML(http.StatusInternalServerError, "dashboard/index.html", gin.H{
-			"error": "Error al recuperar las categorías de la base de datos",
-		})
-		return
+	categories, errCat := models.GetAllCategorias(ctx)
+	if errCat != nil {
+		log.Printf("Aviso en ShowDashboard (GetAllCategorias): %v", errCat)
+		if dbErrorMessage == "" {
+			dbErrorMessage = "No se pudieron cargar las categorías de la base de datos."
+		}
+		categories = []models.Categoria{}
 	}
 
 	// Read session user status if set by CurrentUser middleware
@@ -113,6 +119,7 @@ func (ctrl *DashboardController) ShowDashboard(c *gin.Context) {
 			"limit":              limit,
 			"totalCount":         totalCount,
 			"totalPages":         totalPages,
+			"error":              dbErrorMessage,
 		})
 		return
 	}
@@ -128,5 +135,6 @@ func (ctrl *DashboardController) ShowDashboard(c *gin.Context) {
 		"limit":              limit,
 		"totalCount":         totalCount,
 		"totalPages":         totalPages,
+		"error":              dbErrorMessage,
 	})
 }

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"html/template"
 	"log"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"event-hub/config"
 	"event-hub/controllers"
@@ -32,6 +34,12 @@ func (r *CustomHTMLRenderer) Instance(name string, data any) render.Render {
 	tmpl, exists := r.templates[name]
 	if !exists || tmpl == nil {
 		log.Printf("ERROR CRÍTICO: Plantilla HTML '%s' no encontrada en el renderizador", name)
+		fallback := template.Must(template.New("fallback").Parse(`<!DOCTYPE html><html><head><title>Error de Sistema</title></head><body style="font-family:sans-serif;padding:2rem;background:#020617;color:#f8fafc;"><h1>Event Hub - Error de Vista</h1><p>La plantilla solicitada (<strong>{{.}}</strong>) no se pudo cargar.</p></body></html>`))
+		return render.HTML{
+			Template: fallback,
+			Name:     "fallback",
+			Data:     name,
+		}
 	}
 	return render.HTML{
 		Template: tmpl,
@@ -51,6 +59,9 @@ func getViewsDir() string {
 
 	for _, cand := range candidates {
 		if fi, err := os.Stat(cand); err == nil && fi.IsDir() {
+			if absPath, errAbs := filepath.Abs(cand); errAbs == nil {
+				return absPath
+			}
 			return cand
 		}
 	}
@@ -70,7 +81,7 @@ func getViewsDir() string {
 
 func loadTemplates(r *gin.Engine) {
 	viewsDir := getViewsDir()
-	log.Printf("Cargando plantillas HTML desde: %s", viewsDir)
+	log.Printf("Cargando plantillas HTML desde la ruta absoluta: %s", viewsDir)
 
 	renderer := &CustomHTMLRenderer{
 		templates: make(map[string]*template.Template),
@@ -136,6 +147,7 @@ func loadTemplates(r *gin.Engine) {
 		return nil
 	})
 
+	log.Printf("Plantillas HTML cargadas exitosamente. Total vistas: %d", len(renderer.templates))
 	r.HTMLRender = renderer
 }
 
@@ -165,6 +177,38 @@ func initApp() {
 	r.Use(gin.Recovery())
 
 	loadTemplates(r)
+
+	// Endpoint de Diagnóstico y Salud para Serverless
+	r.GET("/health", func(c *gin.Context) {
+		dbStatus := "disconnected"
+		dbErrStr := ""
+		if config.DB != nil {
+			ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+			defer cancel()
+			if err := config.DB.Ping(ctx); err == nil {
+				dbStatus = "connected"
+			} else {
+				dbStatus = "ping_failed"
+				dbErrStr = err.Error()
+			}
+		}
+
+		templatesCount := 0
+		if renderer, ok := r.HTMLRender.(*CustomHTMLRenderer); ok && renderer != nil {
+			templatesCount = len(renderer.templates)
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":           "ok",
+			"database_status":  dbStatus,
+			"database_error":   dbErrStr,
+			"templates_loaded": templatesCount,
+			"views_dir":        getViewsDir(),
+			"has_database_url": os.Getenv("DATABASE_URL") != "",
+			"has_postgres_url": os.Getenv("POSTGRES_URL") != "",
+			"vercel_env":       os.Getenv("VERCEL_ENV"),
+		})
+	})
 
 	r.GET("/", middlewares.CurrentUser(), dashboardCtrl.ShowDashboard)
 	r.GET("/eventos/:id", middlewares.CurrentUser(), eventCtrl.HandleGetEvent)
