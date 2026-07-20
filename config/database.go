@@ -62,22 +62,23 @@ func ConnectDB() *pgxpool.Pool {
 			return
 		}
 
-		// Intentar Ping inicial (no bloqueante para la asignación del pool)
+		// Intentar Ping inicial
 		if err = pool.Ping(ctx); err != nil {
 			log.Printf("Aviso: El ping inicial a la BD falló (posible reactivación de Neon/Postgres): %v", err)
 		} else {
 			log.Println("Pool de conexiones a PostgreSQL establecido exitosamente")
 		}
 
-		// Asignamos el pool a DB para permitir reintentos en consultas posteriores
+		// Asignamos el pool a DB
 		DB = pool
 
-		// Ejecutar comprobación e inicialización automática si la base de datos está vacía
-		go func() {
-			autoCtx, autoCancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer autoCancel()
-			_ = AutoMigrateIfEmpty(autoCtx)
-		}()
+		// IMPORTANTE EN SERVERLESS: Ejecutar auto-migración sincrónica (sin goroutine)
+		// para evitar congelamiento de la CPU por parte de Vercel/Lambda
+		autoCtx, autoCancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer autoCancel()
+		if err := AutoMigrateIfEmpty(autoCtx); err != nil {
+			log.Printf("Aviso en AutoMigrateIfEmpty: %v", err)
+		}
 	})
 
 	return DB
@@ -97,7 +98,7 @@ func AutoMigrateIfEmpty(ctx context.Context) error {
 	}
 
 	if !exists {
-		log.Println("Base de datos en Neon sin tablas detectada. Ejecutando auto-migración de schema.sql...")
+		log.Println("Base de datos en Neon sin tablas detectada. Ejecutando auto-migración de schema.sql sincrónicamente...")
 		_, err := DB.Exec(ctx, schemaSQL)
 		if err != nil {
 			log.Printf("Error ejecutando auto-migración de schema.sql: %v", err)

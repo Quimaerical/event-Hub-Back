@@ -3,6 +3,7 @@ package controllers
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"log"
 	"net/http"
 
 	"event-hub/middlewares"
@@ -67,7 +68,7 @@ func (ctrl *AuthController) HandleRegister(c *gin.Context) {
 
 	if err := c.ShouldBind(&form); err != nil {
 		c.HTML(http.StatusBadRequest, "auth/register.html", gin.H{
-			"error": "Datos inválidos en el formulario",
+			"error": "Por favor completa todos los campos correctamente: " + err.Error(),
 		})
 		return
 	}
@@ -81,8 +82,9 @@ func (ctrl *AuthController) HandleRegister(c *gin.Context) {
 
 	err := models.CreateUsuario(ctx, user)
 	if err != nil {
+		log.Printf("Error registrando usuario (%s): %v", form.Email, err)
 		c.HTML(http.StatusConflict, "auth/register.html", gin.H{
-			"error": "El correo ya está registrado o los datos no son válidos",
+			"error": "Error al registrar cuenta: " + err.Error(),
 		})
 		return
 	}
@@ -103,7 +105,7 @@ func (ctrl *AuthController) HandleRegister(c *gin.Context) {
 func (ctrl *AuthController) GoogleLogin(c *gin.Context) {
 	state := generateState()
 	c.SetCookie("oauth_state", state, 300, "/", "", false, true)
-	url := ctrl.oauthService.GetGoogleAuthURL(state)
+	url := ctrl.oauthService.GetGoogleAuthURL(c, state)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
@@ -111,7 +113,7 @@ func (ctrl *AuthController) GoogleLogin(c *gin.Context) {
 func (ctrl *AuthController) GitHubLogin(c *gin.Context) {
 	state := generateState()
 	c.SetCookie("oauth_state", state, 300, "/", "", false, true)
-	url := ctrl.oauthService.GetGitHubAuthURL(state)
+	url := ctrl.oauthService.GetGitHubAuthURL(c, state)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
@@ -124,11 +126,10 @@ func (ctrl *AuthController) GoogleCallback(c *gin.Context) {
 	}
 
 	code := c.Query("code")
-	ctx := c.Request.Context()
 
-	oauthUser, err := ctrl.oauthService.HandleGoogleCallback(ctx, code)
+	oauthUser, err := ctrl.oauthService.HandleGoogleCallback(c, code)
 	if err != nil {
-		c.HTML(http.StatusInternalServerError, "auth/login.html", gin.H{"error": "Error al autenticar con Google"})
+		c.HTML(http.StatusInternalServerError, "auth/login.html", gin.H{"error": "Error al autenticar con Google: " + err.Error()})
 		return
 	}
 
@@ -144,11 +145,10 @@ func (ctrl *AuthController) GitHubCallback(c *gin.Context) {
 	}
 
 	code := c.Query("code")
-	ctx := c.Request.Context()
 
-	oauthUser, err := ctrl.oauthService.HandleGitHubCallback(ctx, code)
+	oauthUser, err := ctrl.oauthService.HandleGitHubCallback(c, code)
 	if err != nil {
-		c.HTML(http.StatusInternalServerError, "auth/login.html", gin.H{"error": "Error al autenticar con GitHub"})
+		c.HTML(http.StatusInternalServerError, "auth/login.html", gin.H{"error": "Error al autenticar con GitHub: " + err.Error()})
 		return
 	}
 
@@ -179,7 +179,7 @@ func (ctrl *AuthController) loginOrCreateOAuthUser(c *gin.Context, oauthUser *se
 			}
 			err = models.CreateUsuario(ctx, user)
 			if err != nil {
-				c.HTML(http.StatusInternalServerError, "auth/login.html", gin.H{"error": "Error al registrar el usuario de OAuth"})
+				c.HTML(http.StatusInternalServerError, "auth/login.html", gin.H{"error": "Error al registrar el usuario de OAuth: " + err.Error()})
 				return
 			}
 		}
