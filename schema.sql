@@ -162,7 +162,7 @@ CREATE TABLE auditoria_log (
 ALTER TABLE eventos ADD CONSTRAINT chk_sin_solapamiento 
 EXCLUDE USING gist (
     espacio_id WITH =, 
-    tsrange(fecha_inicio, fecha_fin) WITH &&
+    tstzrange(fecha_inicio, fecha_fin) WITH &&
 ) WHERE (estado IN ('aprobado', 'programado'));
 
 -- B. Límite de capacidad

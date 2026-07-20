@@ -1,0 +1,56 @@
+=== PROMPT ORIGINAL DEL USUARIO ===
+podrias crearme un archivo DESIGN.md para darle las bases de diseño a stitch? y ademas agregame aca mismo un prompt de grado profesional como si fueras un prompt engineer experto en frontend que contenga todas las instrucciones para agregar al front todas las funcionalidades principales del sistema en una UI reactiva y de alta calidad visual, manteniendo una linea de diseño minimalista moderno y llamativa, tomando en cuenta la UX comoda y sencilla y manteniendo una paleta de colores de azul cielo, verdemar, blanco y negro, con interfaz en modo claro y osuro facilmente accesibles, crea el prompt en la linea de comando y el DESIGN.md en mi raiz del projecto
+
+===================================
+=== PROMPT GENERADO PARA STITCH ===
+===================================
+System Role: Expert Frontend & Prompt Engineer
+Context: Prototyping Event Hub Frontend for a Go/Gin backend using Google Stitch
+
+Actúas como un Frontend Engineer de élite y experto en Prompt Engineering. Tu objetivo es diseñar un frontend completo de grado producción, interactivo, reactivo y de alta calidad visual para la aplicación "Event Hub". El diseño debe ser minimalista, moderno y muy pulido.
+
+Sigue rigurosamente estas especificaciones técnicas y visuales:
+
+1. PALETA DE COLORES Y MODO DE CONTRASTE:
+   - Paleta: Azul cielo (Sky Blue: #0ea5e9), Verdemar (Sea Green: #0d9488), Blanco (#ffffff) y Negro (#020617).
+   - Modo Oscuro por defecto: Fondo negro/slate muy oscuro (#020617), elementos translúcidos de tipo "glassmorphism" (bg-white/5, backdrop-blur-md, bordes finos border-white/10).
+   - Modo Claro alternativo: Fondo blanco puro (#ffffff), bordes grises muy suaves (border-slate-200/60) y sombras sutiles.
+   - Interactividad: Un botón alternador (Toggle) visible en la barra de navegación que alterne la clase `dark` en el elemento HTML global para alternar entre el modo claro y oscuro instantáneamente.
+
+2. TIPOGRAFÍA Y UX:
+   - Fuente principal: "Outfit" (Google Fonts) para un estilo premium sin serifa.
+   - Transiciones: Agrega micro-interacciones a todos los botones, enlaces y tarjetas utilizando clases como `transition-all duration-300 ease-in-out` y efectos de hover sutiles (hover:-translate-y-0.5 hover:shadow-lg).
+
+3. COMPONENTES Y VISTAS A GENERAR:
+
+   A. BARRA DE NAVEGACIÓN (Navbar):
+      - Sticky en el top con fondo difuminado (backdrop-blur).
+      - Logo a la izquierda ("EventHub" con gradiente de azul cielo a verdemar).
+      - Menú central: "Cartelera" y "Crear Evento".
+      - Área de usuario a la derecha con dos estados simulados:
+        * Estado Invitado: Enlaces limpios para "Ingresar" y un botón llamativo para "Registrarse".
+        * Estado Autenticado: Mensaje "Hola, [usuario]" con avatar y un botón de borde fino para "Salir".
+
+   B. CARTELERA PRINCIPAL (Dashboard):
+      - Hero principal con título grande en gradiente y un subtítulo que explique el propósito de Event Hub.
+      - Buscador interactivo: Entrada de texto limpia con un ícono de lupa y borde interactivo de enfoque en azul cielo.
+      - Pills de Filtro: Fila de categorías (Tecnología, Música, Talleres, Arte, etc.). El seleccionado debe destacar con fondo azul cielo o verdemar; los inactivos tendrán borde sutil y fondo transparente.
+      - Event Grid: Cuadrícula responsiva de tarjetas de eventos. Cada tarjeta debe ser un panel con efecto vidrio conteniendo: badges de categoría, título llamativo, descripción de 3 líneas max, fecha/hora, ubicación, y el organizador.
+
+   C. PÁGINAS DE ACCESO (Login y Registro):
+      - Tarjetas de formulario minimalistas y centradas.
+      - Entradas de texto de tamaño cómodo con etiquetas pequeñas en mayúscula y trazos sutiles de enfoque.
+      - Botones dedicados para iniciar sesión con credenciales tradicionales.
+      - Integración de inicio de sesión social (OAuth): Botones visualmente atractivos y limpios para "Iniciar sesión con Google" y "Iniciar sesión con GitHub" en la parte inferior de los formularios.
+
+   D. FORMULARIO DE CREAR EVENTO:
+      - Campos de entrada: Título, Categorías (selección múltiple), Fecha y Hora, Ubicación.
+      - Área de Descripción con una funcionalidad IA especial:
+        * Al lado del label o del campo de descripción, incluye un botón llamativo con un icono de destello que diga "Sugerir descripción con IA". 
+        * Simula con una animación de carga (spinner sutil) el proceso de autocompletado asíncrono para el texto de la descripción.
+
+4. CÓDIGO A EXPORTAR:
+   - Genera una estructura HTML5 semántica y limpia.
+   - Utiliza exclusivamente clases de Tailwind CSS estándar para el estilo.
+   - Separa claramente el CSS personalizado o fuentes adicionales si son requeridos en un bloque `<style>`.
+   - Incluye interactividad básica mediante Javascript ligero e interactivo (ej. para alternar el modo oscuro/claro, la simulación de la petición de descripción por IA y los filtros de categorías).

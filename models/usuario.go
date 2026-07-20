@@ -23,6 +23,8 @@ type Usuario struct {
 	PasswordHash       string             `json:"-"`
 	Password           string             `json:"password,omitempty" form:"password"`
 	RoleID             int                `json:"role_id" form:"role_id"`
+	Departamento       pgtype.Text        `json:"departamento,omitempty" form:"departamento"`
+	Telefono           pgtype.Text        `json:"telefono,omitempty" form:"telefono"`
 	OAuthProvider      string             `json:"oauth_provider"`
 	OAuthID            string             `json:"oauth_id"`
 	CreatedAt          time.Time          `json:"created_at"`
@@ -61,9 +63,9 @@ func CreateUsuario(ctx context.Context, u *Usuario) error {
 	}
 
 	query := `
-		INSERT INTO usuarios (nombre, email, password_hash, role_id, oauth_provider, oauth_id, created_at)
+		INSERT INTO usuarios (nombre, email, password_hash, role_id, oauth_provider, oauth_id, fecha_registro)
 		VALUES ($1, $2, $3, $4, $5, $6, NOW())
-		RETURNING id, created_at
+		RETURNING id, fecha_registro
 	`
 	
 	var passHash *string
@@ -81,16 +83,15 @@ func CreateUsuario(ctx context.Context, u *Usuario) error {
 
 // GetUsuarioByID retrieves a user by ID.
 func GetUsuarioByID(ctx context.Context, id int) (*Usuario, error) {
-	// FIX: Se incluyó fcm_token en el SELECT
 	query := `
-		SELECT id, nombre, email, password_hash, role_id, oauth_provider, oauth_id, created_at, fcm_token
+		SELECT id, nombre, email, password_hash, role_id, departamento, telefono, oauth_provider, oauth_id, fecha_registro, fcm_token
 		FROM usuarios WHERE id = $1
 	`
 	var u Usuario
 	var passHash *string
 	var oauthID *string
 	err := config.DB.QueryRow(ctx, query, id).Scan(
-		&u.ID, &u.Nombre, &u.Email, &passHash, &u.RoleID, &u.OAuthProvider, &oauthID, &u.CreatedAt, &u.FcmToken,
+		&u.ID, &u.Nombre, &u.Email, &passHash, &u.RoleID, &u.Departamento, &u.Telefono, &u.OAuthProvider, &oauthID, &u.CreatedAt, &u.FcmToken,
 	)
 	if err != nil {
 		return nil, err
@@ -106,16 +107,15 @@ func GetUsuarioByID(ctx context.Context, id int) (*Usuario, error) {
 
 // GetUsuarioByEmail retrieves a user by Email.
 func GetUsuarioByEmail(ctx context.Context, email string) (*Usuario, error) {
-	// FIX: Se incluyó fcm_token en el SELECT
 	query := `
-		SELECT id, nombre, email, password_hash, role_id, oauth_provider, oauth_id, created_at, fcm_token
+		SELECT id, nombre, email, password_hash, role_id, departamento, telefono, oauth_provider, oauth_id, fecha_registro, fcm_token
 		FROM usuarios WHERE email = $1
 	`
 	var u Usuario
 	var passHash *string
 	var oauthID *string
 	err := config.DB.QueryRow(ctx, query, email).Scan(
-		&u.ID, &u.Nombre, &u.Email, &passHash, &u.RoleID, &u.OAuthProvider, &oauthID, &u.CreatedAt, &u.FcmToken,
+		&u.ID, &u.Nombre, &u.Email, &passHash, &u.RoleID, &u.Departamento, &u.Telefono, &u.OAuthProvider, &oauthID, &u.CreatedAt, &u.FcmToken,
 	)
 	if err != nil {
 		return nil, err
@@ -131,16 +131,15 @@ func GetUsuarioByEmail(ctx context.Context, email string) (*Usuario, error) {
 
 // GetUsuarioByOAuth retrieves a user by OAuth provider and ID.
 func GetUsuarioByOAuth(ctx context.Context, provider, oauthID string) (*Usuario, error) {
-	// FIX: Se incluyó fcm_token en el SELECT
 	query := `
-		SELECT id, nombre, email, password_hash, role_id, oauth_provider, oauth_id, created_at, fcm_token
+		SELECT id, nombre, email, password_hash, role_id, departamento, telefono, oauth_provider, oauth_id, fecha_registro, fcm_token
 		FROM usuarios WHERE oauth_provider = $1 AND oauth_id = $2
 	`
 	var u Usuario
 	var passHash *string
 	var oID *string
 	err := config.DB.QueryRow(ctx, query, provider, oauthID).Scan(
-		&u.ID, &u.Nombre, &u.Email, &passHash, &u.RoleID, &u.OAuthProvider, &oID, &u.CreatedAt, &u.FcmToken,
+		&u.ID, &u.Nombre, &u.Email, &passHash, &u.RoleID, &u.Departamento, &u.Telefono, &u.OAuthProvider, &oID, &u.CreatedAt, &u.FcmToken,
 	)
 	if err != nil {
 		return nil, err
@@ -254,3 +253,42 @@ func GetFCMToken(ctx context.Context, userID int64) (string, error) {
 	}
 	return token, nil
 }
+
+// UpdateUsuarioProfile actualiza el nombre, departamento y teléfono del usuario.
+func UpdateUsuarioProfile(ctx context.Context, userID int, nombre, departamento, telefono string) error {
+	query := `
+		UPDATE usuarios
+		SET nombre = $1,
+		    departamento = NULLIF($2, ''),
+		    telefono = NULLIF($3, '')
+		WHERE id = $4
+	`
+	_, err := config.DB.Exec(ctx, query, nombre, departamento, telefono, userID)
+	return err
+}
+
+// UpdateUsuarioPassword cambia la contraseña local del usuario validando la contraseña actual.
+func UpdateUsuarioPassword(ctx context.Context, userID int, currentPassword, newPassword string) error {
+	u, err := GetUsuarioByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	if u.OAuthProvider != "local" && u.PasswordHash == "" {
+		return errors.New("tu cuenta fue registrada mediante un proveedor externo (Google/GitHub) y no requiere contraseña local")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(currentPassword)); err != nil {
+		return errors.New("la contraseña actual es incorrecta")
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	query := `UPDATE usuarios SET password_hash = $1 WHERE id = $2`
+	_, err = config.DB.Exec(ctx, query, string(hashed), userID)
+	return err
+}
+

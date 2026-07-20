@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Event Hub - Events List</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts (Outfit) -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary": "#6bd8cb",
+                    "on-primary-fixed-variant": "#004c6e",
+                    "on-tertiary-fixed": "#2c1600",
+                    "tertiary-container": "#de8712",
+                    "inverse-primary": "#006591",
+                    "on-tertiary-fixed-variant": "#693c00",
+                    "primary-fixed": "#c9e6ff",
+                    "on-primary-fixed": "#001e2f",
+                    "surface-bright": "#353a3e",
+                    "on-error-container": "#ffdad6",
+                    "on-error": "#690005",
+                    "on-primary-container": "#003751",
+                    "tertiary-fixed": "#ffdcbd",
+                    "secondary-container": "#29a195",
+                    "tertiary": "#ffb86e",
+                    "surface-container": "#1b2024",
+                    "on-secondary-fixed": "#00201d",
+                    "on-primary": "#00344d",
+                    "error": "#ffb4ab",
+                    "primary-container": "#0ea5e9",
+                    "inverse-on-surface": "#2c3135",
+                    "on-background": "#dee3e9",
+                    "primary": "#89ceff",
+                    "outline": "#88929b",
+                    "bg-dark": "#020617",
+                    "surface-container-low": "#171c20",
+                    "on-tertiary-container": "#4d2b00",
+                    "inverse-surface": "#dee3e9",
+                    "surface-container-high": "#252b2f",
+                    "secondary-fixed-dim": "#6bd8cb",
+                    "on-surface": "#dee3e9",
+                    "surface": "#0f1418",
+                    "background": "#0f1418",
+                    "on-secondary-container": "#00302b",
+                    "error-container": "#93000a",
+                    "surface-dim": "#0f1418",
+                    "surface-container-highest": "#30353a",
+                    "bg-light": "#f8fafc",
+                    "surface-tint": "#89ceff",
+                    "on-secondary-fixed-variant": "#005049",
+                    "on-secondary": "#003732",
+                    "on-surface-variant": "#bec8d2",
+                    "tertiary-fixed-dim": "#ffb86e",
+                    "surface-container-lowest": "#0a0f13",
+                    "muted-slate": "#64748b",
+                    "primary-fixed-dim": "#89ceff",
+                    "secondary-fixed": "#89f5e7",
+                    "on-tertiary": "#492900",
+                    "outline-variant": "#3e4850",
+                    "surface-variant": "#30353a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-max": "1280px",
+                    "margin-mobile": "1rem",
+                    "gutter": "1.5rem",
+                    "margin-desktop": "2rem"
+            },
+            "fontFamily": {
+                    "headline-md": ["Outfit"],
+                    "body-md": ["Outfit"],
+                    "label-sm": ["Outfit"],
+                    "display-lg": ["Outfit"],
+                    "label-md": ["Outfit"],
+                    "body-lg": ["Outfit"],
+                    "display-lg-mobile": ["Outfit"],
+                    "headline-lg": ["Outfit"]
+            },
+            "fontSize": {
+                    "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "1.1", "fontWeight": "700"}],
+                    "label-md": ["14px", {"lineHeight": "1.4", "letterSpacing": "0.025em", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "display-lg-mobile": ["36px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "1.25", "fontWeight": "600"}]
+            }
+          }
+        }
+      }
+    </script>
+</head>
+<body class="bg-bg-light dark:bg-bg-dark text-on-surface dark:text-on-background min-h-screen flex flex-col transition-colors duration-300 antialiased font-body-md text-body-md">
+<!-- Navbar -->
+<header class="bg-surface/40 dark:bg-background/40 backdrop-blur-md sticky top-0 z-50 w-full border-b border-outline-variant/10 dark:border-outline/5 shadow-sm dark:shadow-none">
+<div class="flex justify-between items-center h-16 px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
+<!-- Brand -->
+<div class="flex items-center gap-4">
+<a class="text-headline-lg font-headline-lg font-bold bg-gradient-to-r from-[#0ea5e9] to-[#0d9488] bg-clip-text text-transparent hover:opacity-90 transition-opacity" href="#">
+                    Event Hub
+                </a>
+</div>
+<!-- Desktop Nav -->
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors text-label-md font-label-md hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-lg px-2 py-1" href="#">Cartelera</a>
+<a class="text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors text-label-md font-label-md hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-lg px-2 py-1" href="#">Calendario</a>
+<a class="text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors text-label-md font-label-md hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-lg px-2 py-1" href="#">Crear Evento</a>
+<!-- Active Item -->
+<a class="text-primary font-bold border-b-2 border-primary pb-1 text-label-md font-label-md" href="#">Admin Dashboard</a>
+</nav>
+<!-- Actions -->
+<div class="flex items-center gap-2 md:gap-4">
+<button class="p-2 text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dark_mode</span>
+</button>
+<button class="p-2 text-on-surface-variant dark:text-on-surface hover:text-primary transition-colors hover:bg-primary/5 dark:hover:bg-primary-fixed/5 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="hidden md:flex items-center gap-4 pl-4 border-l border-outline-variant/20 dark:border-outline/20">
+<button class="flex items-center gap-2 hover:opacity-80 transition-opacity">
+<img alt="User Profile Avatar" class="w-8 h-8 rounded-full object-cover" data-alt="A stylized user profile avatar portrait, close up. Deep modern corporate aesthetic, glassmorphic UI elements in background. Vibrant sky blue accent lighting against a dark slate background. High contrast, professional." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBS_ISm3ymKQtQnIRV6yaXJJIbx2BkDz8vyro961G4zRbCIHkQ_yrFomNcZqb6tVtp63cABuDzKHZqK76SzMEOVeh14PhOrF9g_Uv7eu0bmL5gpFU8OTLdkVRBDfiLuTSBgebpcDOR9YsDAzAY0DkB7Xw5cDs_XM2c6wuuE2OF3_ZCxv-0kw2UIfjdHmFUYSMo2bq4JeyDFLfb4TxgRrJ1cKvkmlFkgsG7Wt02fYxkI_2qo_kZZfKtd"/>
+<span class="text-label-md font-label-md font-medium hidden sm:block text-on-surface dark:text-on-background">Profile</span>
+</button>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop py-8 flex flex-col gap-8">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+<div>
+<h1 class="text-headline-lg font-headline-lg font-bold text-on-surface dark:text-on-background">Events Management</h1>
+<p class="text-body-md font-body-md text-on-surface-variant mt-1">Review, approve, and manage all events within the hub.</p>
+</div>
+<button class="bg-gradient-to-r from-[#0ea5e9] to-[#0d9488] text-white font-label-md text-label-md px-6 py-3 rounded-full hover:opacity-90 transition-all active:scale-95 flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined">add</span>
+                New Event
+            </button>
+</div>
+<!-- Filters & Search -->
+<div class="bg-white/80 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/5 rounded-2xl p-4 flex flex-col lg:flex-row gap-4 items-center justify-between shadow-sm hover:shadow-lg dark:hover:bg-slate-900/60 transition-all duration-300">
+<!-- Search -->
+<div class="relative w-full lg:w-96 group">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-muted-slate group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full bg-slate-100/80 dark:bg-slate-950/60 border border-slate-200/50 dark:border-outline-variant/30 text-on-surface dark:text-on-background rounded-full pl-12 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:bg-white dark:focus:bg-slate-900/80 transition-all font-body-md text-body-md shadow-sm dark:shadow-none placeholder:text-muted-slate" placeholder="Search by ID, Title, or Organizer..." type="text"/>
+</div>
+<!-- Filters -->
+<div class="flex flex-wrap gap-2 w-full lg:w-auto">
+<button class="px-6 py-2 rounded-full bg-primary-container text-white font-label-md text-label-md transition-all active:scale-95 shadow-sm">All</button>
+<button class="px-4 py-2 rounded-full bg-surface-container dark:bg-surface-container-high border border-outline-variant/20 dark:border-outline/10 text-on-surface-variant hover:text-primary hover:border-primary/50 transition-all active:scale-95 font-label-md text-label-md flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-tertiary-container"></div> Pending
+                </button>
+<button class="px-4 py-2 rounded-full bg-surface-container dark:bg-surface-container-high border border-outline-variant/20 dark:border-outline/10 text-on-surface-variant hover:text-primary hover:border-primary/50 transition-all active:scale-95 font-label-md text-label-md flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-secondary"></div> Approved
+                </button>
+<button class="px-4 py-2 rounded-full bg-surface-container dark:bg-surface-container-high border border-outline-variant/20 dark:border-outline/10 text-on-surface-variant hover:text-primary hover:border-primary/50 transition-all active:scale-95 font-label-md text-label-md flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-error"></div> Rejected
+                </button>
+<button class="px-4 py-2 rounded-full bg-surface-container dark:bg-surface-container-high border border-outline-variant/20 dark:border-outline/10 text-on-surface-variant hover:text-primary hover:border-primary/50 transition-all active:scale-95 font-label-md text-label-md flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-outline"></div> Canceled
+                </button>
+</div>
+</div>
+<!-- Data Table (Glassmorphism) -->
+<div class="bg-white/80 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg dark:hover:bg-slate-900/60 transition-all duration-300">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant/10 dark:border-white/5 bg-slate-100/50 dark:bg-slate-900/60">
+<th class="px-6 py-4 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">ID</th>
+<th class="px-6 py-4 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Title</th>
+<th class="px-6 py-4 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Organizer</th>
+<th class="px-6 py-4 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Date</th>
+<th class="px-6 py-4 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">Status</th>
+<th class="px-6 py-4 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10 dark:divide-white/5 text-body-md font-body-md">
+<!-- Row 1 -->
+<tr class="hover:bg-white/50 dark:hover:bg-slate-900/60 transition-colors group">
+<td class="px-6 py-4 text-primary font-mono text-sm">#EVT-9042</td>
+<td class="px-6 py-4 font-medium text-on-surface dark:text-on-background">Tech Symposium 2024</td>
+<td class="px-6 py-4 text-on-surface-variant flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-container dark:bg-surface-container-high flex items-center justify-center text-[10px] font-bold text-on-surface border border-outline-variant/20 dark:border-outline/10">IT</div>
+                                InnovateTech
+                            </td>
+<td class="px-6 py-4 text-on-surface-variant">Oct 15, 2024</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-secondary/10 text-secondary border border-secondary/20 backdrop-blur-sm">
+<div class="w-1.5 h-1.5 rounded-full bg-secondary"></div> Approved
+                                </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-colors tooltip" title="View">
+<span class="material-symbols-outlined text-sm">visibility</span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-colors tooltip" title="Edit">
+<span class="material-symbols-outlined text-sm">edit</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-white/50 dark:hover:bg-slate-900/60 transition-colors group">
+<td class="px-6 py-4 text-primary font-mono text-sm">#EVT-9043</td>
+<td class="px-6 py-4 font-medium text-on-surface dark:text-on-background">Global Marketing Summit</td>
+<td class="px-6 py-4 text-on-surface-variant flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-container dark:bg-surface-container-high flex items-center justify-center text-[10px] font-bold text-on-surface border border-outline-variant/20 dark:border-outline/10">CM</div>
+                                Creative Minds
+                            </td>
+<td class="px-6 py-4 text-on-surface-variant">Nov 02, 2024</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-tertiary-container/10 text-tertiary border border-tertiary-container/20 backdrop-blur-sm">
+<div class="w-1.5 h-1.5 rounded-full bg-tertiary-container"></div> Pending
+                                </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="px-3 py-1 text-xs font-bold bg-primary/20 text-primary border border-primary/30 rounded-lg hover:bg-primary/30 transition-colors">
+                                        Review
+                                    </button>
+<button class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-colors tooltip" title="View">
+<span class="material-symbols-outlined text-sm">visibility</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-white/50 dark:hover:bg-slate-900/60 transition-colors group">
+<td class="px-6 py-4 text-primary font-mono text-sm">#EVT-9044</td>
+<td class="px-6 py-4 font-medium text-on-surface dark:text-on-background">Annual Charity Gala</td>
+<td class="px-6 py-4 text-on-surface-variant flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-container dark:bg-surface-container-high flex items-center justify-center text-[10px] font-bold text-on-surface border border-outline-variant/20 dark:border-outline/10">HF</div>
+                                Hope Foundation
+                            </td>
+<td class="px-6 py-4 text-on-surface-variant">Dec 10, 2024</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-error/10 text-error border border-error/20 backdrop-blur-sm">
+<div class="w-1.5 h-1.5 rounded-full bg-error"></div> Rejected
+                                </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-colors tooltip" title="View">
+<span class="material-symbols-outlined text-sm">visibility</span>
+</button>
+<button class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-colors tooltip" title="Edit">
+<span class="material-symbols-outlined text-sm">edit</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-white/50 dark:hover:bg-slate-900/60 transition-colors group">
+<td class="px-6 py-4 text-primary font-mono text-sm">#EVT-9045</td>
+<td class="px-6 py-4 font-medium text-on-surface dark:text-on-background">Local Startup Pitch Night</td>
+<td class="px-6 py-4 text-on-surface-variant flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-container dark:bg-surface-container-high flex items-center justify-center text-[10px] font-bold text-on-surface border border-outline-variant/20 dark:border-outline/10">SV</div>
+                                Silicon Valley Bank
+                            </td>
+<td class="px-6 py-4 text-on-surface-variant">Sep 28, 2024</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-outline/10 text-outline border border-outline/20 backdrop-blur-sm">
+<div class="w-1.5 h-1.5 rounded-full bg-outline"></div> Canceled
+                                </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-colors tooltip" title="View">
+<span class="material-symbols-outlined text-sm">visibility</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="border-t border-outline-variant/10 dark:border-white/5 bg-slate-100/30 dark:bg-slate-900/40 px-6 py-4 flex items-center justify-between">
+<div class="text-label-sm font-label-sm text-on-surface-variant">
+                    Showing <span class="font-bold text-on-surface dark:text-on-background">1</span> to <span class="font-bold text-on-surface dark:text-on-background">4</span> of <span class="font-bold text-on-surface dark:text-on-background">42</span> results
+                </div>
+<div class="flex gap-1">
+<button class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled="">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary-container text-white text-label-md font-label-md font-bold shadow-sm">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-primary/10 text-label-md font-label-md hover:text-primary transition-colors">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-primary/10 text-label-md font-label-md hover:text-primary transition-colors">3</button>
+<button class="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-slate-950/60 dark:bg-slate-950/60 w-full py-8 border-t border-outline-variant/10 dark:border-white/5 mt-auto">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter px-margin-mobile md:px-margin-desktop max-w-container-max mx-auto">
+<div class="flex flex-col gap-2">
+<span class="text-headline-md font-headline-md font-bold text-on-surface dark:text-on-background">Event Hub</span>
+<span class="text-body-md font-body-md text-on-surface-variant">© 2024 Event Hub. All rights reserved.</span>
+</div>
+<div class="flex flex-wrap items-center gap-4 md:justify-end">
+<a class="text-on-surface-variant hover:text-primary transition-colors text-label-sm font-label-sm opacity-80 hover:opacity-100" href="#">Privacy Policy</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors text-label-sm font-label-sm opacity-80 hover:opacity-100" href="#">Terms of Service</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors text-label-sm font-label-sm opacity-80 hover:opacity-100" href="#">Help Center</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors text-label-sm font-label-sm opacity-80 hover:opacity-100" href="#">Contact Us</a>
+</div>
+</div>
+</footer>
+</body></html>

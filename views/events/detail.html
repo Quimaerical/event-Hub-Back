@@ -1,0 +1,200 @@
+{{ template "layouts/base.html" . }}
+
+{{ define "title" }}{{ if .evento }}{{ .evento.Titulo }}{{ else }}Detalle del Evento{{ end }} - Event Hub{{ end }}
+
+{{ define "content" }}
+<div class="max-w-4xl mx-auto space-y-8 animate-fade-in-up">
+    <!-- Back button -->
+    <div>
+        <a href="/" class="inline-flex items-center space-x-2 text-sm text-slate-400 hover:text-white transition">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span>Volver a la cartelera</span>
+        </a>
+    </div>
+
+    {{ if .error }}
+        <div class="glass-card border-red-500/30 bg-red-500/10 text-red-200 p-6 rounded-2xl text-center space-y-2">
+            <h2 class="text-xl font-bold">Atención</h2>
+            <p class="text-sm">{{ .error }}</p>
+        </div>
+    {{ else if .evento }}
+        <!-- Main Event Details Card -->
+        <article class="glass-card rounded-3xl p-8 space-y-8 border border-white/10 shadow-2xl relative overflow-hidden">
+            <!-- Header section with badges -->
+            <div class="space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <!-- Categories -->
+                    <div class="flex flex-wrap gap-2">
+                        {{ range .categorias }}
+                            <span class="px-3 py-1 text-xs font-semibold uppercase tracking-wider bg-brand-900/50 border border-brand-500/30 text-brand-200 rounded-lg">
+                                {{ .Nombre }}
+                            </span>
+                        {{ end }}
+                    </div>
+
+                    <!-- Status Badge -->
+                    <div>
+                        {{ if eq .evento.Estado "solicitado" }}
+                            <span class="px-3.5 py-1 text-xs font-bold uppercase tracking-wider bg-amber-500/20 border border-amber-500/40 text-amber-300 rounded-full">
+                                ⏳ Pendiente de Aprobación
+                            </span>
+                        {{ else if eq .evento.Estado "aprobado" }}
+                            <span class="px-3.5 py-1 text-xs font-bold uppercase tracking-wider bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-full">
+                                ✅ Aprobado
+                            </span>
+                        {{ else if eq .evento.Estado "programado" }}
+                            <span class="px-3.5 py-1 text-xs font-bold uppercase tracking-wider bg-blue-500/20 border border-blue-500/40 text-blue-300 rounded-full">
+                                📅 Programado
+                            </span>
+                        {{ else if eq .evento.Estado "rechazado" }}
+                            <span class="px-3.5 py-1 text-xs font-bold uppercase tracking-wider bg-rose-500/20 border border-rose-500/40 text-rose-300 rounded-full">
+                                ❌ Rechazado
+                            </span>
+                        {{ else }}
+                            <span class="px-3.5 py-1 text-xs font-bold uppercase tracking-wider bg-slate-700/50 border border-slate-600 text-slate-300 rounded-full">
+                                {{ .evento.Estado }}
+                            </span>
+                        {{ end }}
+                    </div>
+                </div>
+
+                <!-- Event Title -->
+                <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+                    {{ .evento.Titulo }}
+                </h1>
+            </div>
+
+            <!-- Event Meta Grid (Date, Location, Capacity, Organizer) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-slate-900/60 border border-slate-800 rounded-2xl text-sm">
+                <!-- Date & Time -->
+                <div class="space-y-1">
+                    <span class="text-xs text-slate-400 font-medium">Inicio</span>
+                    <div class="flex items-center space-x-2 text-slate-200 font-semibold">
+                        <svg class="h-4 w-4 text-brand-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span>{{ .evento.FechaInicio.Format "02/01/2006 03:04 PM" }}</span>
+                    </div>
+                </div>
+
+                <!-- End Time -->
+                <div class="space-y-1">
+                    <span class="text-xs text-slate-400 font-medium">Fin</span>
+                    <div class="flex items-center space-x-2 text-slate-200 font-semibold">
+                        <svg class="h-4 w-4 text-brand-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>{{ .evento.FechaFin.Format "02/01/2006 03:04 PM" }}</span>
+                    </div>
+                </div>
+
+                <!-- Location -->
+                <div class="space-y-1">
+                    <span class="text-xs text-slate-400 font-medium">Ubicación</span>
+                    <div class="flex items-center space-x-2 text-slate-200 font-semibold truncate">
+                        <svg class="h-4 w-4 text-brand-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        </svg>
+                        <span class="truncate">{{ .evento.EspacioNombre }}</span>
+                    </div>
+                </div>
+
+                <!-- Capacity & Seats -->
+                <div class="space-y-1">
+                    <span class="text-xs text-slate-400 font-medium">Cupos Disponibles</span>
+                    <div class="flex items-center space-x-2 text-slate-200 font-semibold">
+                        <svg class="h-4 w-4 text-brand-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>{{ .cuposDisponibles }} / {{ .evento.CapacidadMaxima }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="space-y-3 pt-2">
+                <h3 class="text-lg font-bold text-white">Acerca de este evento</h3>
+                <p class="text-slate-300 text-base leading-relaxed whitespace-pre-line">
+                    {{ if .evento.Descripcion.Valid }}{{ .evento.Descripcion.String }}{{ else }}Sin descripción disponible.{{ end }}
+                </p>
+            </div>
+
+            <!-- Action Section: Registration CTA -->
+            <div class="pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                    {{ if .estaInscrito }}
+                        <div class="flex items-center space-x-2 text-emerald-400 font-bold text-sm bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span>¡Estás inscrito en este evento! Te enviaremos un recordatorio.</span>
+                        </div>
+                    {{ else if eq .cuposDisponibles 0 }}
+                        <span class="text-rose-400 font-semibold text-sm">Agotado - No hay cupos disponibles</span>
+                    {{ end }}
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                    {{ if .userID }}
+                        {{ if .estaInscrito }}
+                            <form action="/eventos/{{ .evento.ID }}/cancelar-inscripcion" method="POST">
+                                <button type="submit" onclick="return confirm('¿Seguro que deseas cancelar tu asistencia?')" class="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 rounded-xl transition">
+                                    Cancelar Asistencia
+                                </button>
+                            </form>
+                        {{ else if and (gt .cuposDisponibles 0) (or (eq .evento.Estado "aprobado") (eq .evento.Estado "programado")) }}
+                            <form action="/eventos/{{ .evento.ID }}/inscribir" method="POST">
+                                <button type="submit" class="w-full sm:w-auto px-6 py-3 text-sm font-bold bg-brand-600 hover:bg-brand-500 text-white rounded-xl shadow-lg shadow-brand-500/25 transition transform hover:-translate-y-0.5">
+                                    🎟️ Inscribirme Gratis
+                                </button>
+                            </form>
+                        {{ end }}
+                    {{ else }}
+                        <a href="/login" class="w-full sm:w-auto px-6 py-3 text-sm font-bold bg-brand-600 hover:bg-brand-500 text-white rounded-xl shadow-lg transition text-center">
+                            Inicia sesión para inscribirte
+                        </a>
+                    {{ end }}
+
+                    <!-- Edit / Cancel Buttons for Creator / Admin -->
+                    {{ if or .esCreador .esAdminOrApprover }}
+                        <a href="/eventos/{{ .evento.ID }}/editar" class="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl transition text-center">
+                            ✏️ Editar Evento
+                        </a>
+                    {{ end }}
+                </div>
+            </div>
+
+            <!-- Admin Approval Bar -->
+            {{ if and .esAdminOrApprover (eq .evento.Estado "solicitado") }}
+                <div class="p-6 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-4">
+                    <div class="flex items-center space-x-3 text-amber-300">
+                        <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div class="text-sm">
+                            <span class="font-bold block">Acción de Administración</span>
+                            <span>Este evento requiere tu aprobación antes de ser publicado en la cartelera general.</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-3 pt-2">
+                        <form action="/eventos/{{ .evento.ID }}/aprobar" method="POST" class="inline">
+                            <button type="submit" onclick="return confirm('¿Aprobar y publicar este evento?')" class="px-5 py-2.5 text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow transition">
+                                ✅ Aprobar Evento
+                            </button>
+                        </form>
+
+                        <form action="/eventos/{{ .evento.ID }}/rechazar" method="POST" class="inline">
+                            <button type="submit" onclick="return confirm('¿Rechazar este evento?')" class="px-5 py-2.5 text-sm font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow transition">
+                                ❌ Rechazar Evento
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {{ end }}
+        </article>
+    {{ end }}
+</div>
+{{ end }}

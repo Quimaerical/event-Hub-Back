@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"html"
+	"strconv"
 	"strings"
 	"time"
 
@@ -47,13 +48,15 @@ var ErrInscripcionNoEncontrada = errors.New("inscripción no encontrada")
 
 // FiltroEvento contiene los parámetros de búsqueda y paginación
 type FiltroEvento struct {
-	Search        string
-	CategoryID    int
-	Estado        string
-	EspacioID     int
-	OrganizadorID int64
-	Page          int
-	Limit         int
+	Search            string
+	CategoryID        int
+	Estado            string
+	EspacioID         int
+	OrganizadorID     int64
+	UserID            int64
+	IsAdminOrApprover bool
+	Page              int
+	Limit             int
 }
 
 // Evento mapea la tabla 'eventos'
@@ -94,7 +97,7 @@ func CreateEvento(ctx context.Context, e *Evento, categoryIDs []int) error {
 	}
 	defer tx.Rollback(ctx)
 
-	_, err = tx.Exec(ctx, "SET LOCAL myapp.current_user_id = $1", e.OrganizadorID)
+	_, err = tx.Exec(ctx, "SELECT set_config('myapp.current_user_id', $1, true)", strconv.FormatInt(e.OrganizadorID, 10))
 	if err != nil {
 		return err
 	}
@@ -207,7 +210,7 @@ func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, a
 	if aprobadorID != nil {
 		actorID = *aprobadorID
 	}
-	_, err = tx.Exec(ctx, "SET LOCAL myapp.current_user_id = $1", actorID)
+	_, err = tx.Exec(ctx, "SELECT set_config('myapp.current_user_id', $1, true)", strconv.FormatInt(actorID, 10))
 	if err != nil {
 		return err
 	}
@@ -320,6 +323,14 @@ func SearchEventos(ctx context.Context, filtro FiltroEvento) ([]Evento, int, err
 		query.WriteString(fmt.Sprintf(" AND e.estado = $%d", argIndex))
 		args = append(args, filtro.Estado)
 		argIndex++
+	} else if !filtro.IsAdminOrApprover {
+		if filtro.UserID > 0 {
+			query.WriteString(fmt.Sprintf(" AND (e.estado IN ('aprobado', 'programado') OR (e.organizador_id = $%d))", argIndex))
+			args = append(args, filtro.UserID)
+			argIndex++
+		} else {
+			query.WriteString(" AND e.estado IN ('aprobado', 'programado')")
+		}
 	}
 	if filtro.EspacioID > 0 {
 		query.WriteString(fmt.Sprintf(" AND e.espacio_id = $%d", argIndex))
@@ -399,4 +410,50 @@ func GetCategoriasForEvento(ctx context.Context, eventoID int64) ([]Categoria, e
 	return categories, rows.Err()
 }
 
+// UpdateEvento actualiza un evento existente y sus categorías asociadas.
+func UpdateEvento(ctx context.Context, e *Evento, categoryIDs []int) error {
+	tx, err := config.DB.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
 
+	_, err = tx.Exec(ctx, "SELECT set_config('myapp.current_user_id', $1, true)", strconv.FormatInt(e.OrganizadorID, 10))
+	if err != nil {
+		return err
+	}
+
+	query := `
+		UPDATE eventos
+		SET titulo = $1,
+		    descripcion = $2,
+		    espacio_id = $3,
+		    fecha_inicio = $4,
+		    fecha_fin = $5,
+		    capacidad_maxima = $6,
+		    fecha_actualizacion = NOW()
+		WHERE id = $7
+	`
+	_, err = tx.Exec(ctx, query,
+		e.Titulo, e.Descripcion, e.EspacioID,
+		e.FechaInicio, e.FechaFin, e.CapacidadMaxima, e.ID,
+	)
+	if err != nil {
+		return err
+	}
+
+	// Re-vincular categorías
+	_, err = tx.Exec(ctx, `DELETE FROM evento_categorias WHERE evento_id = $1`, e.ID)
+	if err != nil {
+		return err
+	}
+
+	for _, catID := range categoryIDs {
+		_, err = tx.Exec(ctx, `INSERT INTO evento_categorias (evento_id, categoria_id) VALUES ($1, $2)`, e.ID, catID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit(ctx)
+}

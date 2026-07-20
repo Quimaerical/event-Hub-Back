@@ -1,10 +1,23 @@
-{{ define "events/create.html" }}
 {{ template "layouts/base.html" . }}
 
 {{ define "title" }}Crear Evento - Event Hub{{ end }}
 
 {{ define "content" }}
-<div class="max-w-2xl w-full mx-auto mt-6">
+<style>
+    @keyframes auraPulse {
+        0%, 100% {
+            box-shadow: 0 0 8px rgba(139, 92, 246, 0.2), inset 0 0 0 1px rgba(139, 92, 246, 0.1);
+        }
+        50% {
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.6), inset 0 0 2px rgba(139, 92, 246, 0.4);
+            border-color: rgba(139, 92, 246, 0.7);
+        }
+    }
+    .gemini-loading-aura {
+        animation: auraPulse 1.8s infinite ease-in-out;
+    }
+</style>
+<div class="max-w-2xl w-full mx-auto mt-6 animate-fade-in-up">
     <div class="glass-panel p-8 rounded-3xl shadow-xl space-y-6">
         <div class="space-y-2">
             <h1 class="text-3xl font-bold text-white">Crear un Nuevo Evento</h1>
@@ -32,6 +45,7 @@
                 <div>
                     <label for="fecha_fin" class="block text-sm font-medium text-slate-300">Fecha y Hora de Fin</label>
                     <input type="datetime-local" id="fecha_fin" name="fecha_fin" required class="mt-1 block w-full bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition">
+                    <p id="fecha-warn" class="hidden text-xs text-amber-400 mt-1 font-medium">⚠️ La hora de fin debe ser posterior a la de inicio.</p>
                 </div>
 
                 <div>
@@ -89,6 +103,30 @@
 </div>
 
 <script>
+    const typeWriter = (text, elementId, speed = 8) => {
+        const el = document.getElementById(elementId);
+        el.value = "";
+        let i = 0;
+        
+        const btn = document.getElementById('btn-gemini');
+        btn.disabled = true;
+        
+        el.classList.add('gemini-loading-aura');
+        
+        function type() {
+            if (i < text.length) {
+                el.value += text.charAt(i);
+                i++;
+                el.scrollTop = el.scrollHeight;
+                setTimeout(type, speed);
+            } else {
+                el.classList.remove('gemini-loading-aura');
+                btn.disabled = false;
+            }
+        }
+        type();
+    };
+
     document.getElementById('btn-gemini').addEventListener('click', async () => {
         const titulo = document.getElementById('titulo').value.trim();
         const espacioSelect = document.getElementById('espacio_id');
@@ -100,7 +138,9 @@
         }
 
         const btn = document.getElementById('btn-gemini');
+        const descField = document.getElementById('descripcion');
         const originalText = btn.innerHTML;
+        
         btn.disabled = true;
         btn.innerHTML = `
             <svg class="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -109,6 +149,8 @@
             </svg>
             <span>Generando...</span>
         `;
+        
+        descField.classList.add('gemini-loading-aura');
 
         try {
             const response = await fetch('/eventos/sugerir-descripcion', {
@@ -120,19 +162,68 @@
             });
 
             const data = await response.json();
+            descField.classList.remove('gemini-loading-aura');
+            
             if (response.ok && data.descripcion) {
-                document.getElementById('descripcion').value = data.descripcion;
+                typeWriter(data.descripcion, 'descripcion');
             } else {
                 alert(data.error || 'Ocurrió un error al generar la descripción.');
+                btn.disabled = false;
             }
         } catch (error) {
             console.error('Error:', error);
             alert('No se pudo conectar con el servidor.');
-        } finally {
+            descField.classList.remove('gemini-loading-aura');
             btn.disabled = false;
+        } finally {
             btn.innerHTML = originalText;
         }
     });
+
+    // Datetime-local auto-sync logic
+    const startInput = document.getElementById('fecha_inicio');
+    const endInput = document.getElementById('fecha_fin');
+    const fechaWarn = document.getElementById('fecha-warn');
+
+    const formatToLocalISO = (date) => {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
+
+    if (!startInput.value) {
+        const now = new Date();
+        now.setMinutes(0, 0, 0);
+        now.setHours(now.getHours() + 1);
+        startInput.value = formatToLocalISO(now);
+
+        const end = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+        endInput.value = formatToLocalISO(end);
+    }
+
+    const validateDates = () => {
+        if (!startInput.value || !endInput.value) return;
+        const startDate = new Date(startInput.value);
+        const endDate = new Date(endInput.value);
+
+        if (endDate <= startDate) {
+            fechaWarn.classList.remove('hidden');
+        } else {
+            fechaWarn.classList.add('hidden');
+        }
+    };
+
+    startInput.addEventListener('change', () => {
+        if (!startInput.value) return;
+        const startDate = new Date(startInput.value);
+        const currentEndDate = endInput.value ? new Date(endInput.value) : null;
+
+        if (!currentEndDate || currentEndDate <= startDate) {
+            const newEnd = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+            endInput.value = formatToLocalISO(newEnd);
+        }
+        validateDates();
+    });
+
+    endInput.addEventListener('change', validateDates);
 </script>
-{{ end }}
 {{ end }}

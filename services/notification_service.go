@@ -27,6 +27,11 @@ func (s *NotificationService) SendDirectNotification(ctx context.Context, fcmTok
 		return fmt.Errorf("token FCM vacío, abortando envío de notificación")
 	}
 
+	if s.client == nil {
+		slog.Warn("Firebase Cloud Messaging no está inicializado. Omitiendo envío de notificación directa.")
+		return nil
+	}
+
 	// Construimos el mensaje con el formato que Flutter espera
 	message := &messaging.Message{
 		Token: fcmToken,
@@ -52,6 +57,11 @@ func (s *NotificationService) SendDirectNotification(ctx context.Context, fcmTok
 func (s *NotificationService) BroadcastToTopic(ctx context.Context, topic, titulo, cuerpo string, extraData map[string]string) error {
 	if topic == "" {
 		return fmt.Errorf("el tema (topic) no puede estar vacío")
+	}
+
+	if s.client == nil {
+		slog.Warn("Firebase Cloud Messaging no está inicializado. Omitiendo broadcast.")
+		return nil
 	}
 
 	message := &messaging.Message{
