@@ -1,14 +1,20 @@
 {
   "version": 2,
-  "functions": {
-    "api/**/*.go": {
-      "includeFiles": "views/**"
-    }
-  },
-  "rewrites": [
+  "builds": [
     {
-      "source": "/(.*)",
-      "destination": "/api/index"
+      "src": "api/index.go",
+      "use": "@vercel/go",
+      "config": {
+        "includeFiles": [
+          "views/**"
+        ]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "api/index.go"
     }
   ]
 }
