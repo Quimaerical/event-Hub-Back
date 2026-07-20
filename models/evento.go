@@ -45,6 +45,7 @@ var ErrUsuarioYaInscrito = errors.New("el usuario ya está inscrito en este even
 var ErrInscripcionNoEncontrada = errors.New("inscripción no encontrada")
 
 
+
 // FiltroEvento contiene los parámetros de búsqueda y paginación
 type FiltroEvento struct {
 	Search            string
@@ -456,4 +457,3 @@ func UpdateEvento(ctx context.Context, e *Evento, categoryIDs []int) error {
 
 	return tx.Commit(ctx)
 }
-

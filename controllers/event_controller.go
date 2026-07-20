@@ -247,6 +247,7 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 
 	slog.Info("Evento creado localmente", "evento_id", evento.ID, "user_id", userID)
 
+	// FIX: Reemplazar el mock por la obtención real del token desde BD
 	tokenOAuth, err := models.GetGoogleToken(ctx, int(userID))
 	if err != nil {
 		slog.Warn("Usuario sin token de Google Calendar, omitiendo sincronización", "user_id", userID)
