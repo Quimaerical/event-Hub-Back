@@ -1,0 +1,96 @@
+{{ template "layouts/base.html" . }}
+
+{{ define "title" }}Editar Evento - Event Hub{{ end }}
+
+{{ define "content" }}
+<div class="max-w-3xl mx-auto space-y-8 animate-fade-in-up">
+    <!-- Header -->
+    <div class="space-y-2 text-center sm:text-left">
+        <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">Editar Evento</h1>
+        <p class="text-slate-400 text-sm sm:text-base">Actualiza la información de tu evento antes o durante la convocatoria.</p>
+    </div>
+
+    {{ if .error }}
+        <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm font-medium">
+            ⚠️ {{ .error }}
+        </div>
+    {{ end }}
+
+    <form action="/eventos/{{ .evento.ID }}/editar" method="POST" class="glass-card rounded-3xl p-6 sm:p-8 space-y-6 border border-white/10 shadow-2xl">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <!-- Title -->
+            <div class="sm:col-span-2">
+                <label for="titulo" class="block text-sm font-medium text-slate-300">Título del Evento</label>
+                <input type="text" id="titulo" name="titulo" value="{{ .evento.Titulo }}" required class="mt-1 block w-full bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition">
+            </div>
+
+            <!-- Start Date -->
+            <div>
+                <label for="fecha_inicio" class="block text-sm font-medium text-slate-300">Fecha y Hora de Inicio</label>
+                <input type="datetime-local" id="fecha_inicio" name="fecha_inicio" value="{{ .fecha_inicio_str }}" required class="mt-1 block w-full bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition">
+            </div>
+
+            <!-- End Date -->
+            <div>
+                <label for="fecha_fin" class="block text-sm font-medium text-slate-300">Fecha y Hora de Fin</label>
+                <input type="datetime-local" id="fecha_fin" name="fecha_fin" value="{{ .fecha_fin_str }}" required class="mt-1 block w-full bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition">
+            </div>
+
+            <!-- Location Space -->
+            <div>
+                <label for="espacio_id" class="block text-sm font-medium text-slate-300">Espacio</label>
+                <select id="espacio_id" name="espacio_id" required class="mt-1 block w-full bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition">
+                    {{ $selectedSpace := .evento.EspacioID }}
+                    {{ range .espacios }}
+                        <option value="{{ .ID }}" {{ if eq .ID $selectedSpace }}selected{{ end }}>{{ .Nombre }} (Capacidad: {{ .Capacidad }})</option>
+                    {{ end }}
+                </select>
+            </div>
+
+            <!-- Capacity -->
+            <div>
+                <label for="capacidad_maxima" class="block text-sm font-medium text-slate-300">Capacidad Máxima</label>
+                <input type="number" id="capacidad_maxima" name="capacidad_maxima" value="{{ .evento.CapacidadMaxima }}" required min="1" class="mt-1 block w-full bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition">
+            </div>
+        </div>
+
+        <!-- Categories -->
+        <div class="space-y-2">
+            <label class="block text-sm font-medium text-slate-300">Categorías</label>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 bg-slate-900/40 border border-slate-800/80 rounded-xl">
+                {{ $catMap := .catMap }}
+                {{ range .categorias }}
+                    <label class="inline-flex items-center space-x-2.5 cursor-pointer text-sm text-slate-300 hover:text-white">
+                        <input type="checkbox" name="categorias" value="{{ .ID }}" {{ if index $catMap .ID }}checked{{ end }} class="h-4 w-4 rounded border-slate-700 bg-slate-900 text-brand-500 focus:ring-brand-500 focus:ring-offset-slate-900 transition">
+                        <span>{{ .Nombre }}</span>
+                    </label>
+                {{ end }}
+            </div>
+        </div>
+
+        <!-- Description -->
+        <div class="space-y-2">
+            <div class="flex items-center justify-between">
+                <label for="descripcion" class="block text-sm font-medium text-slate-300">Descripción del Evento</label>
+                <button type="button" id="btn-gemini" class="inline-flex items-center space-x-1.5 text-xs font-semibold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-3 py-1.5 rounded-lg transition shadow-md shadow-indigo-500/20">
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span>Sugerir con IA</span>
+                </button>
+            </div>
+            <textarea id="descripcion" name="descripcion" rows="4" required class="block w-full bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition leading-relaxed">{{ if .evento.Descripcion.Valid }}{{ .evento.Descripcion.String }}{{ end }}</textarea>
+        </div>
+
+        <!-- Actions -->
+        <div class="pt-4 flex items-center justify-end space-x-4 border-t border-slate-800">
+            <a href="/eventos/{{ .evento.ID }}" class="px-5 py-2.5 text-sm font-semibold text-slate-400 hover:text-white transition">
+                Cancelar
+            </a>
+            <button type="submit" class="px-6 py-2.5 text-sm font-bold bg-brand-600 hover:bg-brand-500 text-white rounded-xl shadow-lg shadow-brand-500/20 transition transform hover:-translate-y-0.5">
+                Guardar Cambios
+            </button>
+        </div>
+    </form>
+</div>
+{{ end }}

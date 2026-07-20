@@ -21,56 +21,73 @@
         {{ if .eventos }}
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {{ range .eventos }}
-                    <article class="glass-card rounded-2xl overflow-hidden flex flex-col h-full p-6 space-y-4">
-                        <div class="flex-grow space-y-3">
-                            <!-- Categories Badge -->
-                            <div class="flex flex-wrap gap-1.5">
-                                {{ range .Categorias }}
-                                    <span class="px-2.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase bg-brand-900/40 border border-brand-500/20 text-brand-100 rounded-md">
-                                        {{ .Nombre }}
-                                    </span>
-                                {{ end }}
-                            </div>
-                            
-                            <!-- Title -->
-                            <h2 class="text-xl font-bold text-white line-clamp-2 hover:text-brand-500 transition duration-150">
-                                {{ .Titulo }}
-                            </h2>
-                            
-                            <!-- Description -->
-                            <p class="text-slate-400 text-sm line-clamp-3 leading-relaxed">
-                                {{ .Descripcion }}
-                            </p>
-                        </div>
-
-                        <!-- Event Details -->
-                        <div class="pt-4 border-t border-slate-900 space-y-2 text-xs text-slate-400">
-                            <!-- Date & Time -->
-                            <div class="flex items-center space-x-2">
-                                <svg class="h-4 w-4 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                <span>{{ .FechaInicio.Format "02 Jan 2006, 15:04" }}</span>
-                            </div>
-                            
-                            <!-- Location -->
-                            <div class="flex items-center space-x-2">
-                                <svg class="h-4 w-4 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                <span class="truncate">{{ .EspacioNombre }}</span>
-                            </div>
-
-                            <!-- Organizer Info -->
-                            <div class="flex items-center space-x-2 pt-1">
-                                <div class="h-5 w-5 rounded-full bg-brand-600/20 border border-brand-500/30 flex items-center justify-center text-[10px] font-bold text-brand-100 uppercase">
-                                    o
+                    <a href="/eventos/{{ .ID }}" class="block group">
+                        <article class="glass-card rounded-2xl overflow-hidden flex flex-col h-full p-6 space-y-4 border border-white/10 hover:border-brand-500/40 transition duration-300 transform group-hover:-translate-y-1">
+                            <div class="flex-grow space-y-3">
+                                <!-- Categories & Status Badges -->
+                                <div class="flex flex-wrap items-center justify-between gap-1.5">
+                                    <div class="flex flex-wrap gap-1.5">
+                                        {{ range .Categorias }}
+                                            <span class="px-2.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase bg-brand-900/40 border border-brand-500/20 text-brand-100 rounded-md">
+                                                {{ .Nombre }}
+                                            </span>
+                                        {{ end }}
+                                    </div>
+                                    {{ if eq .Estado "solicitado" }}
+                                        <span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 border border-amber-500/30 text-amber-300 rounded-full">
+                                            ⏳ En Revisión
+                                        </span>
+                                    {{ end }}
                                 </div>
-                                <span class="truncate">Organizado por <span class="text-slate-300 font-medium">{{ .OrganizadorNombre }}</span></span>
+                                
+                                <!-- Title -->
+                                <h2 class="text-xl font-bold text-white line-clamp-2 group-hover:text-brand-400 transition duration-150">
+                                    {{ .Titulo }}
+                                </h2>
+                                
+                                <!-- Description -->
+                                <p class="text-slate-400 text-sm line-clamp-3 leading-relaxed">
+                                    {{ if .Descripcion.Valid }}{{ .Descripcion.String }}{{ else }}Sin descripción.{{ end }}
+                                </p>
                             </div>
-                        </div>
-                    </article>
+
+                            <!-- Event Details -->
+                            <div class="pt-4 border-t border-slate-900 space-y-2 text-xs text-slate-400">
+                                <!-- Date & Time -->
+                                <div class="flex items-center space-x-2">
+                                    <svg class="h-4 w-4 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <span>{{ .FechaInicio.Format "02/01/2006 03:04 PM" }}</span>
+                                </div>
+                                
+                                <!-- Location -->
+                                <div class="flex items-center space-x-2">
+                                    <svg class="h-4 w-4 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    <span class="truncate">{{ .EspacioNombre }}</span>
+                                </div>
+
+                                <!-- Organizer Info & Ver Detalle -->
+                                <div class="flex items-center justify-between pt-2">
+                                    <div class="flex items-center space-x-2 truncate">
+                                        <div class="h-5 w-5 rounded-full bg-brand-600/20 border border-brand-500/30 flex items-center justify-center text-[10px] font-bold text-brand-100 uppercase">
+                                            o
+                                        </div>
+                                        <span class="truncate">Organizado por <span class="text-slate-300 font-medium">{{ .OrganizadorNombre }}</span></span>
+                                    </div>
+                                    <span class="text-xs font-bold text-brand-400 group-hover:text-brand-300 transition flex items-center space-x-1 shrink-0 ml-2">
+                                        <span>Ver Detalle</span>
+                                        <svg class="h-3.5 w-3.5 transform group-hover:translate-x-0.5 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </span>
+                                </div>
+                            </div>
+                        </article>
+                    </a>
                 {{ end }}
             </div>
         {{ else }}

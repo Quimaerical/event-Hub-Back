@@ -45,6 +45,7 @@
                 <div>
                     <label for="fecha_fin" class="block text-sm font-medium text-slate-300">Fecha y Hora de Fin</label>
                     <input type="datetime-local" id="fecha_fin" name="fecha_fin" required class="mt-1 block w-full bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition">
+                    <p id="fecha-warn" class="hidden text-xs text-amber-400 mt-1 font-medium">⚠️ La hora de fin debe ser posterior a la de inicio.</p>
                 </div>
 
                 <div>
@@ -178,5 +179,51 @@
             btn.innerHTML = originalText;
         }
     });
+
+    // Datetime-local auto-sync logic
+    const startInput = document.getElementById('fecha_inicio');
+    const endInput = document.getElementById('fecha_fin');
+    const fechaWarn = document.getElementById('fecha-warn');
+
+    const formatToLocalISO = (date) => {
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
+
+    if (!startInput.value) {
+        const now = new Date();
+        now.setMinutes(0, 0, 0);
+        now.setHours(now.getHours() + 1);
+        startInput.value = formatToLocalISO(now);
+
+        const end = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+        endInput.value = formatToLocalISO(end);
+    }
+
+    const validateDates = () => {
+        if (!startInput.value || !endInput.value) return;
+        const startDate = new Date(startInput.value);
+        const endDate = new Date(endInput.value);
+
+        if (endDate <= startDate) {
+            fechaWarn.classList.remove('hidden');
+        } else {
+            fechaWarn.classList.add('hidden');
+        }
+    };
+
+    startInput.addEventListener('change', () => {
+        if (!startInput.value) return;
+        const startDate = new Date(startInput.value);
+        const currentEndDate = endInput.value ? new Date(endInput.value) : null;
+
+        if (!currentEndDate || currentEndDate <= startDate) {
+            const newEnd = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+            endInput.value = formatToLocalISO(newEnd);
+        }
+        validateDates();
+    });
+
+    endInput.addEventListener('change', validateDates);
 </script>
 {{ end }}

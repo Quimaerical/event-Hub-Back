@@ -1,0 +1,176 @@
+{{ template "layouts/base.html" . }}
+
+{{ define "title" }}Mi Tablón de Eventos - Event Hub{{ end }}
+
+{{ define "content" }}
+<div class="max-w-5xl mx-auto space-y-8 animate-fade-in-up">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">Mi Tablón de Eventos</h1>
+            <p class="text-slate-400 text-sm sm:text-base">Gestiona tus inscripciones a eventos y monitorea el estado de tus publicaciones.</p>
+        </div>
+        <div>
+            <a href="/eventos/crear" class="inline-flex items-center space-x-2 px-5 py-2.5 text-sm font-bold bg-brand-600 hover:bg-brand-500 text-white rounded-xl shadow-lg shadow-brand-500/20 transition transform hover:-translate-y-0.5">
+                <span>+ Crear Nuevo Evento</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="flex border-b border-slate-800 space-x-8 text-sm font-semibold">
+        <button id="tab-btn-asistire" onclick="switchTab('asistire')" class="pb-3 border-b-2 text-brand-400 border-brand-500 transition flex items-center space-x-2">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5z" />
+            </svg>
+            <span>Eventos a los que Asistiré ({{ len .eventos_asistira }})</span>
+        </button>
+        <button id="tab-btn-creados" onclick="switchTab('creados')" class="pb-3 border-b-2 text-slate-400 border-transparent hover:text-slate-200 transition flex items-center space-x-2">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            <span>Mis Eventos Creados ({{ len .eventos_creados }})</span>
+        </button>
+    </div>
+
+    <!-- Tab 1: Eventos a los que Asistiré -->
+    <div id="tab-content-asistire" class="space-y-4">
+        {{ if .eventos_asistira }}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {{ range .eventos_asistira }}
+                    <article class="glass-card rounded-2xl p-6 space-y-4 flex flex-col justify-between border border-white/10 hover:border-brand-500/30 transition">
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="px-3 py-1 text-[11px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full">
+                                    Reserva Confirmada
+                                </span>
+                                <span class="text-xs text-slate-400 font-medium">{{ .EspacioNombre }}</span>
+                            </div>
+
+                            <h3 class="text-xl font-bold text-white hover:text-brand-400 transition">
+                                <a href="/eventos/{{ .ID }}">{{ .Titulo }}</a>
+                            </h3>
+
+                            <div class="space-y-1 text-xs text-slate-300">
+                                <div class="flex items-center space-x-2">
+                                    <svg class="h-4 w-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <span>{{ .FechaInicio.Format "02/01/2006 03:04 PM" }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between">
+                            <a href="/eventos/{{ .ID }}" class="text-xs font-semibold text-brand-400 hover:text-brand-300">
+                                Ver Detalle del Evento →
+                            </a>
+                            <form action="/eventos/{{ .ID }}/cancelar-inscripcion" method="POST">
+                                <button type="submit" onclick="return confirm('¿Cancelar tu inscripción a este evento?')" class="text-xs font-semibold text-rose-400 hover:text-rose-300">
+                                    Cancelar Asistencia
+                                </button>
+                            </form>
+                        </div>
+                    </article>
+                {{ end }}
+            </div>
+        {{ else }}
+            <div class="text-center py-12 px-4 bg-slate-900/30 border border-slate-900 rounded-2xl space-y-3">
+                <p class="text-slate-400 text-sm">Aún no estás inscrito en ningún evento.</p>
+                <a href="/" class="inline-flex items-center text-xs font-semibold text-brand-400 hover:underline">
+                    Explorar la Cartelera Principal →
+                </a>
+            </div>
+        {{ end }}
+    </div>
+
+    <!-- Tab 2: Mis Eventos Creados -->
+    <div id="tab-content-creados" class="hidden space-y-4">
+        {{ if .eventos_creados }}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {{ range .eventos_creados }}
+                    <article class="glass-card rounded-2xl p-6 space-y-4 flex flex-col justify-between border border-white/10 hover:border-brand-500/30 transition">
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                {{ if eq .Estado "solicitado" }}
+                                    <span class="px-3 py-1 text-[11px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full">
+                                        ⏳ Pendiente de Aprobación
+                                    </span>
+                                {{ else if eq .Estado "aprobado" }}
+                                    <span class="px-3 py-1 text-[11px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full">
+                                        ✅ Aprobado
+                                    </span>
+                                {{ else if eq .Estado "programado" }}
+                                    <span class="px-3 py-1 text-[11px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full">
+                                        📅 Programado
+                                    </span>
+                                {{ else if eq .Estado "rechazado" }}
+                                    <span class="px-3 py-1 text-[11px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-full">
+                                        ❌ Rechazado
+                                    </span>
+                                {{ else }}
+                                    <span class="px-3 py-1 text-[11px] font-bold uppercase tracking-wider bg-slate-800 text-slate-300 rounded-full">
+                                        {{ .Estado }}
+                                    </span>
+                                {{ end }}
+
+                                <span class="text-xs text-slate-400 font-medium">{{ .EspacioNombre }}</span>
+                            </div>
+
+                            <h3 class="text-xl font-bold text-white hover:text-brand-400 transition">
+                                <a href="/eventos/{{ .ID }}">{{ .Titulo }}</a>
+                            </h3>
+
+                            <div class="space-y-1 text-xs text-slate-300">
+                                <div class="flex items-center space-x-2">
+                                    <svg class="h-4 w-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <span>{{ .FechaInicio.Format "02/01/2006 03:04 PM" }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between">
+                            <a href="/eventos/{{ .ID }}" class="text-xs font-semibold text-brand-400 hover:text-brand-300">
+                                Ver Detalle →
+                            </a>
+                            <a href="/eventos/{{ .ID }}/editar" class="text-xs font-semibold text-slate-300 hover:text-white">
+                                ✏️ Editar Evento
+                            </a>
+                        </div>
+                    </article>
+                {{ end }}
+            </div>
+        {{ else }}
+            <div class="text-center py-12 px-4 bg-slate-900/30 border border-slate-900 rounded-2xl space-y-3">
+                <p class="text-slate-400 text-sm">Aún no has creado ningún evento.</p>
+                <a href="/eventos/crear" class="inline-flex items-center text-xs font-semibold text-brand-400 hover:underline">
+                    Crear tu primer evento ahora →
+                </a>
+            </div>
+        {{ end }}
+    </div>
+</div>
+
+<script>
+    function switchTab(tab) {
+        const btnAsistire = document.getElementById('tab-btn-asistire');
+        const btnCreados = document.getElementById('tab-btn-creados');
+        const contentAsistire = document.getElementById('tab-content-asistire');
+        const contentCreados = document.getElementById('tab-content-creados');
+
+        if (tab === 'asistire') {
+            btnAsistire.className = "pb-3 border-b-2 text-brand-400 border-brand-500 transition flex items-center space-x-2";
+            btnCreados.className = "pb-3 border-b-2 text-slate-400 border-transparent hover:text-slate-200 transition flex items-center space-x-2";
+            contentAsistire.classList.remove('hidden');
+            contentCreados.classList.add('hidden');
+        } else {
+            btnCreados.className = "pb-3 border-b-2 text-brand-400 border-brand-500 transition flex items-center space-x-2";
+            btnAsistire.className = "pb-3 border-b-2 text-slate-400 border-transparent hover:text-slate-200 transition flex items-center space-x-2";
+            contentCreados.classList.remove('hidden');
+            contentAsistire.classList.add('hidden');
+        }
+    }
+</script>
+{{ end }}

@@ -13,14 +13,19 @@
             <nav class="hidden md:flex space-x-8 text-sm font-medium">
                 <a href="/" class="text-slate-200 hover:text-white transition">Cartelera</a>
                 {{ if .userID }}
+                    <a href="/tablon" class="text-slate-400 hover:text-white transition">Mi Tablón</a>
                     <a href="/eventos/crear" class="text-slate-400 hover:text-white transition">Crear Evento</a>
+                    <a href="/perfil" class="text-slate-400 hover:text-white transition">Mi Perfil</a>
                 {{ end }}
             </nav>
 
             <!-- Right Actions -->
             <div class="flex items-center space-x-4">
                 {{ if .userID }}
-                    <span class="text-slate-400 text-sm hidden sm:inline">Hola, <span class="text-brand-100 font-medium">{{ .email }}</span></span>
+                    <a href="/perfil" class="flex items-center space-x-2 text-slate-300 hover:text-white text-sm font-medium transition">
+                        <span class="text-slate-400 text-sm hidden sm:inline">Hola, <span class="text-brand-100 font-medium">{{ .email }}</span></span>
+                    </a>
+                    <a href="/perfil" class="px-3 py-1.5 text-xs font-semibold bg-brand-500/10 hover:bg-brand-500/20 text-brand-300 border border-brand-500/20 rounded-lg transition">Mi Perfil</a>
                     <a href="/auth/logout" class="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition border border-slate-700">Salir</a>
                 {{ else }}
                     <a href="/login" class="text-slate-300 hover:text-white text-sm font-medium transition">Ingresar</a>
