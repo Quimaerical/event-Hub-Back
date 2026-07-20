@@ -2,6 +2,8 @@ package config
 
 import (
 	"context"
+	_ "embed"
+	"errors"
 	"log"
 	"os"
 	"sync"
@@ -10,14 +12,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+//go:embed schema.sql
+var schemaSQL string
+
 var (
 	DB   *pgxpool.Pool
 	once sync.Once
 )
 
 // ConnectDB initializes the database connection pool using pgxpool.
-// It retrieves the DATABASE_URL environment variable and optimizes
-// connection settings for resource-constrained serverless environments (Neon, Render, Vercel).
 func ConnectDB() *pgxpool.Pool {
 	once.Do(func() {
 		databaseURL := os.Getenv("DATABASE_URL")
@@ -68,9 +71,54 @@ func ConnectDB() *pgxpool.Pool {
 
 		// Asignamos el pool a DB para permitir reintentos en consultas posteriores
 		DB = pool
+
+		// Ejecutar comprobación e inicialización automática si la base de datos está vacía
+		go func() {
+			autoCtx, autoCancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer autoCancel()
+			_ = AutoMigrateIfEmpty(autoCtx)
+		}()
 	})
 
 	return DB
+}
+
+// AutoMigrateIfEmpty comprueba si la base de datos está vacía y ejecuta schema.sql automáticamente
+func AutoMigrateIfEmpty(ctx context.Context) error {
+	if DB == nil {
+		return errors.New("base de datos no conectada")
+	}
+
+	var exists bool
+	query := `SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'roles')`
+	err := DB.QueryRow(ctx, query).Scan(&exists)
+	if err != nil {
+		log.Printf("Aviso al verificar existencia de tabla 'roles': %v", err)
+	}
+
+	if !exists {
+		log.Println("Base de datos en Neon sin tablas detectada. Ejecutando auto-migración de schema.sql...")
+		_, err := DB.Exec(ctx, schemaSQL)
+		if err != nil {
+			log.Printf("Error ejecutando auto-migración de schema.sql: %v", err)
+			return err
+		}
+		log.Println("¡Auto-migración completada exitosamente en Neon PostgreSQL!")
+	} else {
+		log.Println("Base de datos verificada: Las tablas principales existen.")
+	}
+
+	return nil
+}
+
+// ForceMigrate ejecuta explícitamente el script schema.sql para recrear o reiniciar las tablas
+func ForceMigrate(ctx context.Context) error {
+	if DB == nil {
+		return errors.New("base de datos no conectada")
+	}
+	log.Println("Ejecutando migración forzada de schema.sql en Neon PostgreSQL...")
+	_, err := DB.Exec(ctx, schemaSQL)
+	return err
 }
 
 // CloseDB closes the database connection pool.

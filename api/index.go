@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"html/template"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"event-hub/controllers"
 	"event-hub/middlewares"
 	"event-hub/services"
+	"event-hub/views"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/render"
@@ -48,106 +50,68 @@ func (r *CustomHTMLRenderer) Instance(name string, data any) render.Render {
 	}
 }
 
-// getViewsDir localiza dinámicamente la carpeta views en entornos locales y Serverless
-func getViewsDir() string {
-	candidates := []string{
-		"views",
-		"../views",
-		"./views",
-		"../../views",
-	}
-
-	for _, cand := range candidates {
-		if fi, err := os.Stat(cand); err == nil && fi.IsDir() {
-			if absPath, errAbs := filepath.Abs(cand); errAbs == nil {
-				return absPath
-			}
-			return cand
-		}
-	}
-
-	if exe, err := os.Executable(); err == nil {
-		dir := filepath.Dir(exe)
-		for _, sub := range []string{"views", "../views"} {
-			target := filepath.Join(dir, sub)
-			if fi, err := os.Stat(target); err == nil && fi.IsDir() {
-				return target
-			}
-		}
-	}
-
-	return "views"
-}
-
 func loadTemplates(r *gin.Engine) {
-	viewsDir := getViewsDir()
-	log.Printf("Cargando plantillas HTML desde la ruta absoluta: %s", viewsDir)
-
 	renderer := &CustomHTMLRenderer{
 		templates: make(map[string]*template.Template),
 	}
 
 	var layoutsAndPartials []string
 
-	_ = filepath.Walk(viewsDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info == nil {
+	// 1. Recopilar layouts y partials desde el sistema de archivos embebido (views.FS)
+	_ = fs.WalkDir(views.FS, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d == nil {
 			return nil
 		}
-		if !info.IsDir() && strings.HasSuffix(path, ".html") {
-			cleanPath := filepath.ToSlash(path)
-			if strings.Contains(cleanPath, "/layouts/") || strings.Contains(cleanPath, "/partials/") {
-				layoutsAndPartials = append(layoutsAndPartials, path)
+		cleanPath := filepath.ToSlash(path)
+		if !d.IsDir() && strings.HasSuffix(cleanPath, ".html") {
+			if strings.Contains(cleanPath, "layouts/") || strings.Contains(cleanPath, "partials/") {
+				layoutsAndPartials = append(layoutsAndPartials, cleanPath)
 			}
 		}
 		return nil
 	})
 
-	_ = filepath.Walk(viewsDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info == nil {
+	// 2. Cargar páginas principales asociando layouts y partials
+	_ = fs.WalkDir(views.FS, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d == nil {
 			return nil
 		}
-		if !info.IsDir() && strings.HasSuffix(path, ".html") {
-			cleanPath := filepath.ToSlash(path)
-			isLayoutOrPartial := strings.Contains(cleanPath, "/layouts/") || strings.Contains(cleanPath, "/partials/")
+		cleanPath := filepath.ToSlash(path)
+		if !d.IsDir() && strings.HasSuffix(cleanPath, ".html") {
+			isLayoutOrPartial := strings.Contains(cleanPath, "layouts/") || strings.Contains(cleanPath, "partials/")
 
 			if !isLayoutOrPartial {
-				relPath, errRel := filepath.Rel(viewsDir, path)
-				if errRel != nil {
-					return nil
-				}
-				relPath = filepath.ToSlash(relPath)
-
-				tmpl := template.New(relPath)
-				content, errRead := os.ReadFile(path)
+				tmpl := template.New(cleanPath)
+				content, errRead := views.FS.ReadFile(cleanPath)
 				if errRead != nil {
-					log.Printf("Error leyendo plantilla %s: %v", path, errRead)
+					log.Printf("Error leyendo plantilla embebida %s: %v", cleanPath, errRead)
 					return nil
 				}
 
 				var errParse error
 				tmpl, errParse = tmpl.Parse(string(content))
 				if errParse != nil {
-					log.Printf("Error parseando plantilla %s: %v", path, errParse)
+					log.Printf("Error parseando plantilla embebida %s: %v", cleanPath, errParse)
 					return nil
 				}
 
 				for _, lp := range layoutsAndPartials {
-					lpContent, errLP := os.ReadFile(lp)
+					lpContent, errLP := views.FS.ReadFile(lp)
 					if errLP == nil {
 						tmpl, errParse = tmpl.Parse(string(lpContent))
 						if errParse != nil {
-							log.Printf("Error asociando partial/layout %s a %s: %v", lp, path, errParse)
+							log.Printf("Error asociando partial/layout embebido %s a %s: %v", lp, cleanPath, errParse)
 						}
 					}
 				}
 
-				renderer.templates[relPath] = tmpl
+				renderer.templates[cleanPath] = tmpl
 			}
 		}
 		return nil
 	})
 
-	log.Printf("Plantillas HTML cargadas exitosamente. Total vistas: %d", len(renderer.templates))
+	log.Printf("Plantillas HTML embebidas cargadas exitosamente. Total vistas: %d", len(renderer.templates))
 	r.HTMLRender = renderer
 }
 
@@ -203,10 +167,42 @@ func initApp() {
 			"database_status":  dbStatus,
 			"database_error":   dbErrStr,
 			"templates_loaded": templatesCount,
-			"views_dir":        getViewsDir(),
+			"embedded_views":   true,
 			"has_database_url": os.Getenv("DATABASE_URL") != "",
 			"has_postgres_url": os.Getenv("POSTGRES_URL") != "",
 			"vercel_env":       os.Getenv("VERCEL_ENV"),
+		})
+	})
+
+	// Endpoint seguro de Migración Web en Vercel
+	r.GET("/api/migrate", func(c *gin.Context) {
+		secretParam := c.Query("secret")
+		expectedSecret := os.Getenv("MIGRATE_SECRET")
+		if expectedSecret == "" {
+			expectedSecret = "saga_migrate_2026"
+		}
+
+		if secretParam != expectedSecret {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Clave secreta de migración inválida o ausente",
+			})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+		defer cancel()
+
+		if err := config.ForceMigrate(ctx); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status": "error",
+				"error":  "Fallo al ejecutar la migración: " + err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "success",
+			"message": "Base de datos Neon PostgreSQL migrada y poblada correctamente con todas sus tablas y datos de prueba.",
 		})
 	})
 
