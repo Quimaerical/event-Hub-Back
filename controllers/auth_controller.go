@@ -105,7 +105,7 @@ func (ctrl *AuthController) HandleRegister(c *gin.Context) {
 func (ctrl *AuthController) GoogleLogin(c *gin.Context) {
 	state := generateState()
 	c.SetCookie("oauth_state", state, 300, "/", "", false, true)
-	url := ctrl.oauthService.GetGoogleAuthURL(c, state)
+	url := ctrl.oauthService.GetGoogleAuthURL(state)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
@@ -113,7 +113,7 @@ func (ctrl *AuthController) GoogleLogin(c *gin.Context) {
 func (ctrl *AuthController) GitHubLogin(c *gin.Context) {
 	state := generateState()
 	c.SetCookie("oauth_state", state, 300, "/", "", false, true)
-	url := ctrl.oauthService.GetGitHubAuthURL(c, state)
+	url := ctrl.oauthService.GetGitHubAuthURL(state)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
@@ -126,8 +126,9 @@ func (ctrl *AuthController) GoogleCallback(c *gin.Context) {
 	}
 
 	code := c.Query("code")
+	ctx := c.Request.Context()
 
-	oauthUser, err := ctrl.oauthService.HandleGoogleCallback(c, code)
+	oauthUser, err := ctrl.oauthService.HandleGoogleCallback(ctx, code)
 	if err != nil {
 		c.HTML(http.StatusInternalServerError, "auth/login.html", gin.H{"error": "Error al autenticar con Google: " + err.Error()})
 		return
@@ -145,8 +146,9 @@ func (ctrl *AuthController) GitHubCallback(c *gin.Context) {
 	}
 
 	code := c.Query("code")
+	ctx := c.Request.Context()
 
-	oauthUser, err := ctrl.oauthService.HandleGitHubCallback(c, code)
+	oauthUser, err := ctrl.oauthService.HandleGitHubCallback(ctx, code)
 	if err != nil {
 		c.HTML(http.StatusInternalServerError, "auth/login.html", gin.H{"error": "Error al autenticar con GitHub: " + err.Error()})
 		return

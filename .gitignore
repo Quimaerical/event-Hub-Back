@@ -20,3 +20,5 @@ firebase-credentials.json
 *.njsproj
 *.sln
 *.sw?
+.vercel
+.env*

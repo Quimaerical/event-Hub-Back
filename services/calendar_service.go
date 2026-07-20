@@ -26,11 +26,15 @@ type CalendarService struct {
 }
 
 func NewCalendarService() *CalendarService {
-	// FIX: Inicializar el oauth2.Config con las variables de entorno correctas y los Scopes
+	redirectURL := os.Getenv("GOOGLE_REDIRECT_URL")
+	if redirectURL == "" {
+		redirectURL = "https://event-hub-back.vercel.app/auth/google/callback"
+	}
+
 	config := &oauth2.Config{
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
-		RedirectURL:  os.Getenv("GOOGLE_REDIRECT_URL"),
+		RedirectURL:  redirectURL,
 		Scopes:       []string{calendar.CalendarScope},
 		Endpoint:     google.Endpoint,
 	}

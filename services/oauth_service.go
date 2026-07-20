@@ -1,12 +1,12 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 
-	"github.com/gin-gonic/gin"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 	"golang.org/x/oauth2/google"
@@ -24,30 +24,22 @@ type OAuthUser struct {
 	Provider string `json:"provider"`
 }
 
-// GetRedirectURLFromRequest determina dinámicamente el protocolo (http/https) y host real de la petición HTTP
-func GetRedirectURLFromRequest(c *gin.Context, envVar string, callbackPath string) string {
+func getRedirectURL(envVar string, hardcodedVercelURL string) string {
 	if val := os.Getenv(envVar); val != "" {
 		return val
 	}
-
-	scheme := "http"
-	if c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https" || os.Getenv("VERCEL") != "" {
-		scheme = "https"
-	}
-
-	host := c.Request.Host
-	if host != "" {
-		return scheme + "://" + host + callbackPath
-	}
-
-	return "http://localhost:8080" + callbackPath
+	return hardcodedVercelURL
 }
 
-// NewOAuthService initializes the base OAuth configs.
+// NewOAuthService initializes the configs using hardcoded Vercel production URLs as default.
 func NewOAuthService() *OAuthService {
+	redirectGoogle := getRedirectURL("GOOGLE_REDIRECT_URL", "https://event-hub-back.vercel.app/auth/google/callback")
+	redirectGitHub := getRedirectURL("GITHUB_REDIRECT_URL", "https://event-hub-back.vercel.app/auth/github/callback")
+
 	googleConfig := &oauth2.Config{
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		RedirectURL:  redirectGoogle,
 		Scopes: []string{
 			"https://www.googleapis.com/auth/userinfo.profile",
 			"https://www.googleapis.com/auth/userinfo.email",
@@ -58,6 +50,7 @@ func NewOAuthService() *OAuthService {
 	githubConfig := &oauth2.Config{
 		ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
 		ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
+		RedirectURL:  redirectGitHub,
 		Scopes:       []string{"user:email", "read:user"},
 		Endpoint:     github.Endpoint,
 	}
@@ -68,32 +61,24 @@ func NewOAuthService() *OAuthService {
 	}
 }
 
-// GetGoogleAuthURL returns the redirect URL for Google login using dynamic request host.
-func (s *OAuthService) GetGoogleAuthURL(c *gin.Context, state string) string {
-	config := *s.GoogleConfig
-	config.RedirectURL = GetRedirectURLFromRequest(c, "GOOGLE_REDIRECT_URL", "/auth/google/callback")
-	return config.AuthCodeURL(state, oauth2.AccessTypeOffline)
+// GetGoogleAuthURL returns the redirect URL for Google login.
+func (s *OAuthService) GetGoogleAuthURL(state string) string {
+	return s.GoogleConfig.AuthCodeURL(state, oauth2.AccessTypeOffline)
 }
 
-// GetGitHubAuthURL returns the redirect URL for GitHub login using dynamic request host.
-func (s *OAuthService) GetGitHubAuthURL(c *gin.Context, state string) string {
-	config := *s.GitHubConfig
-	config.RedirectURL = GetRedirectURLFromRequest(c, "GITHUB_REDIRECT_URL", "/auth/github/callback")
-	return config.AuthCodeURL(state)
+// GetGitHubAuthURL returns the redirect URL for GitHub login.
+func (s *OAuthService) GetGitHubAuthURL(state string) string {
+	return s.GitHubConfig.AuthCodeURL(state)
 }
 
 // HandleGoogleCallback exchanges auth code for token and retrieves the profile details.
-func (s *OAuthService) HandleGoogleCallback(c *gin.Context, code string) (*OAuthUser, error) {
-	config := *s.GoogleConfig
-	config.RedirectURL = GetRedirectURLFromRequest(c, "GOOGLE_REDIRECT_URL", "/auth/google/callback")
-
-	ctx := c.Request.Context()
-	token, err := config.Exchange(ctx, code)
+func (s *OAuthService) HandleGoogleCallback(ctx context.Context, code string) (*OAuthUser, error) {
+	token, err := s.GoogleConfig.Exchange(ctx, code)
 	if err != nil {
 		return nil, fmt.Errorf("failed google token exchange: %w", err)
 	}
 
-	client := config.Client(ctx, token)
+	client := s.GoogleConfig.Client(ctx, token)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch userinfo from google: %w", err)
@@ -123,17 +108,13 @@ func (s *OAuthService) HandleGoogleCallback(c *gin.Context, code string) (*OAuth
 }
 
 // HandleGitHubCallback exchanges auth code for token and retrieves the profile details.
-func (s *OAuthService) HandleGitHubCallback(c *gin.Context, code string) (*OAuthUser, error) {
-	config := *s.GitHubConfig
-	config.RedirectURL = GetRedirectURLFromRequest(c, "GITHUB_REDIRECT_URL", "/auth/github/callback")
-
-	ctx := c.Request.Context()
-	token, err := config.Exchange(ctx, code)
+func (s *OAuthService) HandleGitHubCallback(ctx context.Context, code string) (*OAuthUser, error) {
+	token, err := s.GitHubConfig.Exchange(ctx, code)
 	if err != nil {
 		return nil, fmt.Errorf("failed github token exchange: %w", err)
 	}
 
-	client := config.Client(ctx, token)
+	client := s.GitHubConfig.Client(ctx, token)
 	resp, err := client.Get("https://api.github.com/user")
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch userinfo from github: %w", err)
