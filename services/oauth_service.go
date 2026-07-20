@@ -31,10 +31,10 @@ func getRedirectURL(envVar string, hardcodedVercelURL string) string {
 	return hardcodedVercelURL
 }
 
-// NewOAuthService initializes the configs using hardcoded Vercel production URLs as default.
+// NewOAuthService initializes the configs using localhost URLs as default for testing.
 func NewOAuthService() *OAuthService {
-	redirectGoogle := getRedirectURL("GOOGLE_REDIRECT_URL", "https://event-hub-back.vercel.app/auth/google/callback")
-	redirectGitHub := getRedirectURL("GITHUB_REDIRECT_URL", "https://event-hub-back.vercel.app/auth/github/callback")
+	redirectGoogle := getRedirectURL("GOOGLE_REDIRECT_URL", "http://localhost:8080/auth/google/callback")
+	redirectGitHub := getRedirectURL("GITHUB_REDIRECT_URL", "http://localhost:8080/auth/github/callback")
 
 	googleConfig := &oauth2.Config{
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),

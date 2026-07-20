@@ -28,7 +28,7 @@ type CalendarService struct {
 func NewCalendarService() *CalendarService {
 	redirectURL := os.Getenv("GOOGLE_REDIRECT_URL")
 	if redirectURL == "" {
-		redirectURL = "https://event-hub-back.vercel.app/auth/google/callback"
+		redirectURL = "http://localhost:8080/auth/google/callback"
 	}
 
 	config := &oauth2.Config{
