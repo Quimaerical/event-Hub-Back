@@ -17,7 +17,7 @@ var (
 
 // ConnectDB initializes the database connection pool using pgxpool.
 // It retrieves the DATABASE_URL environment variable and optimizes
-// connection settings for resource-constrained serverless environments (Neon, Render).
+// connection settings for resource-constrained serverless environments (Neon, Render, Vercel).
 func ConnectDB() *pgxpool.Pool {
 	once.Do(func() {
 		databaseURL := os.Getenv("DATABASE_URL")
@@ -27,9 +27,12 @@ func ConnectDB() *pgxpool.Pool {
 		if databaseURL == "" {
 			databaseURL = os.Getenv("POSTGRES_PRISMA_URL")
 		}
+		if databaseURL == "" {
+			databaseURL = os.Getenv("POSTGRES_URL_NON_POOLING")
+		}
 
 		if databaseURL == "" {
-			log.Println("ERROR: No se encontró la variable de entorno DATABASE_URL ni POSTGRES_URL")
+			log.Println("ERROR CRÍTICO: No se encontró ninguna variable de entorno de base de datos (DATABASE_URL, POSTGRES_URL, etc.)")
 			return
 		}
 
@@ -39,15 +42,15 @@ func ConnectDB() *pgxpool.Pool {
 			return
 		}
 
-		// Neon/Vercel Postgres Connection Pool Optimizations
-		config.MaxConns = 8
-		config.MinConns = 2
-		config.MaxConnIdleTime = 15 * time.Minute
-		config.MaxConnLifetime = 1 * time.Hour
+		// Optimizaciones para Vercel Serverless & Neon PostgreSQL
+		config.MaxConns = 10
+		config.MinConns = 0 // CRÍTICO EN SERVERLESS: Debe ser 0 para evitar bloqueos en el arranque del contenedor
+		config.MaxConnIdleTime = 5 * time.Minute
+		config.MaxConnLifetime = 30 * time.Minute
 		config.HealthCheckPeriod = 1 * time.Minute
 
 		// Establish connection pool
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 
 		pool, err := pgxpool.NewWithConfig(ctx, config)
@@ -56,14 +59,15 @@ func ConnectDB() *pgxpool.Pool {
 			return
 		}
 
-		// Verify connection is active
+		// Intentar Ping inicial (no bloqueante para la asignación del pool)
 		if err = pool.Ping(ctx); err != nil {
-			log.Printf("Petición de Ping a la base de datos fallida: %v", err)
-			return
+			log.Printf("Aviso: El ping inicial a la BD falló (posible reactivación de Neon/Postgres): %v", err)
+		} else {
+			log.Println("Pool de conexiones a PostgreSQL establecido exitosamente")
 		}
 
+		// Asignamos el pool a DB para permitir reintentos en consultas posteriores
 		DB = pool
-		log.Println("Pool de conexiones a PostgreSQL establecido exitosamente")
 	})
 
 	return DB

@@ -33,7 +33,10 @@ func GetCategoriaByID(ctx context.Context, id int) (*Categoria, error) {
 // GetAllCategorias retrieves all categories.
 func GetAllCategorias(ctx context.Context) ([]Categoria, error) {
 	if config.DB == nil {
-		return nil, errors.New("la base de datos no está disponible")
+		config.ConnectDB()
+		if config.DB == nil {
+			return nil, errors.New("la base de datos no está disponible")
+		}
 	}
 	query := `SELECT id, nombre, descripcion FROM categorias ORDER BY nombre ASC`
 	rows, err := config.DB.Query(ctx, query)

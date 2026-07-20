@@ -284,7 +284,10 @@ func UpdateCalendarEventID(ctx context.Context, eventoID int64, calendarID strin
 // SearchEventos recupera eventos con filtros dinámicos, paginación, y elimina N+1 con array_agg.
 func SearchEventos(ctx context.Context, filtro FiltroEvento) ([]Evento, int, error) {
 	if config.DB == nil {
-		return nil, 0, errors.New("la base de datos no está disponible")
+		config.ConnectDB()
+		if config.DB == nil {
+			return nil, 0, errors.New("la base de datos no está disponible")
+		}
 	}
 	if filtro.Page < 1 {
 		filtro.Page = 1

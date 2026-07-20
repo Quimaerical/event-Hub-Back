@@ -29,61 +29,104 @@ type CustomHTMLRenderer struct {
 }
 
 func (r *CustomHTMLRenderer) Instance(name string, data any) render.Render {
+	tmpl, exists := r.templates[name]
+	if !exists || tmpl == nil {
+		log.Printf("ERROR CRÍTICO: Plantilla HTML '%s' no encontrada en el renderizador", name)
+	}
 	return render.HTML{
-		Template: r.templates[name],
+		Template: tmpl,
 		Name:     name,
 		Data:     data,
 	}
 }
 
+// getViewsDir localiza dinámicamente la carpeta views en entornos locales y Serverless
+func getViewsDir() string {
+	candidates := []string{
+		"views",
+		"../views",
+		"./views",
+		"../../views",
+	}
+
+	for _, cand := range candidates {
+		if fi, err := os.Stat(cand); err == nil && fi.IsDir() {
+			return cand
+		}
+	}
+
+	if exe, err := os.Executable(); err == nil {
+		dir := filepath.Dir(exe)
+		for _, sub := range []string{"views", "../views"} {
+			target := filepath.Join(dir, sub)
+			if fi, err := os.Stat(target); err == nil && fi.IsDir() {
+				return target
+			}
+		}
+	}
+
+	return "views"
+}
+
 func loadTemplates(r *gin.Engine) {
+	viewsDir := getViewsDir()
+	log.Printf("Cargando plantillas HTML desde: %s", viewsDir)
+
 	renderer := &CustomHTMLRenderer{
 		templates: make(map[string]*template.Template),
 	}
 
 	var layoutsAndPartials []string
 
-	err := filepath.Walk("views", func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
+	_ = filepath.Walk(viewsDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info == nil {
+			return nil
 		}
 		if !info.IsDir() && strings.HasSuffix(path, ".html") {
-			if strings.Contains(path, "/layouts/") || strings.Contains(path, "/partials/") {
+			cleanPath := filepath.ToSlash(path)
+			if strings.Contains(cleanPath, "/layouts/") || strings.Contains(cleanPath, "/partials/") {
 				layoutsAndPartials = append(layoutsAndPartials, path)
 			}
 		}
 		return nil
 	})
-	if err != nil {
-		log.Printf("Aviso: Error al leer layouts/partials: %v", err)
-	}
 
-	err = filepath.Walk("views", func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
+	_ = filepath.Walk(viewsDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info == nil {
+			return nil
 		}
 		if !info.IsDir() && strings.HasSuffix(path, ".html") {
-			if !strings.Contains(path, "/layouts/") && !strings.Contains(path, "/partials/") {
-				relPath, errRel := filepath.Rel("views", path)
+			cleanPath := filepath.ToSlash(path)
+			isLayoutOrPartial := strings.Contains(cleanPath, "/layouts/") || strings.Contains(cleanPath, "/partials/")
+
+			if !isLayoutOrPartial {
+				relPath, errRel := filepath.Rel(viewsDir, path)
 				if errRel != nil {
-					return errRel
+					return nil
 				}
 				relPath = filepath.ToSlash(relPath)
 
 				tmpl := template.New(relPath)
 				content, errRead := os.ReadFile(path)
 				if errRead != nil {
-					return errRead
+					log.Printf("Error leyendo plantilla %s: %v", path, errRead)
+					return nil
 				}
-				_, errParse := tmpl.Parse(string(content))
+
+				var errParse error
+				tmpl, errParse = tmpl.Parse(string(content))
 				if errParse != nil {
-					return errParse
+					log.Printf("Error parseando plantilla %s: %v", path, errParse)
+					return nil
 				}
 
 				for _, lp := range layoutsAndPartials {
 					lpContent, errLP := os.ReadFile(lp)
 					if errLP == nil {
-						tmpl.Parse(string(lpContent))
+						tmpl, errParse = tmpl.Parse(string(lpContent))
+						if errParse != nil {
+							log.Printf("Error asociando partial/layout %s a %s: %v", lp, path, errParse)
+						}
 					}
 				}
 
@@ -92,9 +135,6 @@ func loadTemplates(r *gin.Engine) {
 		}
 		return nil
 	})
-	if err != nil {
-		log.Printf("Aviso: Error al cargar vistas: %v", err)
-	}
 
 	r.HTMLRender = renderer
 }
