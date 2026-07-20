@@ -100,7 +100,9 @@ func loadTemplates(r *gin.Engine) {
 }
 
 func initApp() {
-	_ = godotenv.Load()
+	if os.Getenv("VERCEL") == "" {
+		_ = godotenv.Load()
+	}
 	gin.SetMode(gin.ReleaseMode)
 
 	// Conectar a BD

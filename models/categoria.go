@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"errors"
 	"event-hub/config"
 )
 
@@ -13,6 +14,9 @@ type Categoria struct {
 
 // GetCategoriaByID retrieves a category by its ID.
 func GetCategoriaByID(ctx context.Context, id int) (*Categoria, error) {
+	if config.DB == nil {
+		return nil, errors.New("la base de datos no está disponible")
+	}
 	query := `SELECT id, nombre, descripcion FROM categorias WHERE id = $1`
 	var c Categoria
 	var desc *string
@@ -28,6 +32,9 @@ func GetCategoriaByID(ctx context.Context, id int) (*Categoria, error) {
 
 // GetAllCategorias retrieves all categories.
 func GetAllCategorias(ctx context.Context) ([]Categoria, error) {
+	if config.DB == nil {
+		return nil, errors.New("la base de datos no está disponible")
+	}
 	query := `SELECT id, nombre, descripcion FROM categorias ORDER BY nombre ASC`
 	rows, err := config.DB.Query(ctx, query)
 	if err != nil {

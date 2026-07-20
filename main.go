@@ -21,8 +21,10 @@ import (
 func main() {
 	// 1. Load environment variables.
 	// We ignore error because in cloud environments like Render/Neon, env variables are injected directly.
-	if err := godotenv.Load(); err != nil {
-		log.Println("Aviso: No se encontró archivo .env, leyendo del sistema")
+	if os.Getenv("VERCEL") == "" {
+		if err := godotenv.Load(); err != nil {
+			log.Println("Aviso: No se encontró archivo .env, leyendo del sistema")
+		}
 	}
 
 	// 2. Connect to Database connection pool
