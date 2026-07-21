@@ -1,9 +1,12 @@
 package services
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -141,5 +144,64 @@ func (s *CalendarService) AddAttendee(ctx context.Context, token *oauth2.Token, 
 	}
 
 	slog.Info("Asistente añadido a Google Calendar", "calendar_event_id", calendarEventID, "email", email)
+	return nil
+}
+
+type AppsScriptNotificationPayload struct {
+	Titulo        string   `json:"titulo"`
+	Fecha         string   `json:"fecha"`
+	Descripcion   string   `json:"descripcion"`
+	Duracion      int      `json:"duracion"`
+	InvitarA      []string `json:"invitar_a,omitempty"`
+	EmailAsistente string  `json:"email_asistente,omitempty"`
+	Secret        string   `json:"secret,omitempty"`
+}
+
+// SendAppsScriptNotification envía un webhook POST a Google Apps Script para agendar eventos y notificar a los usuarios
+func (s *CalendarService) SendAppsScriptNotification(ctx context.Context, titulo string, fechaInicio time.Time, fechaFin time.Time, descripcion string, usuariosAInvitar []string) error {
+	scriptURL := os.Getenv("GOOGLE_APPS_SCRIPT_URL")
+	if scriptURL == "" {
+		slog.Info("GOOGLE_APPS_SCRIPT_URL no configurada, omitiendo notificación a Apps Script")
+		return nil
+	}
+
+	secret := os.Getenv("GOOGLE_APPS_SCRIPT_SECRET")
+	duracion := int(fechaFin.Sub(fechaInicio).Hours())
+	if duracion <= 0 {
+		duracion = 2
+	}
+
+	payload := AppsScriptNotificationPayload{
+		Titulo:      titulo,
+		Fecha:       fechaInicio.Format(time.RFC3339),
+		Descripcion: descripcion,
+		Duracion:    duracion,
+		InvitarA:    usuariosAInvitar,
+		Secret:      secret,
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("error al codificar JSON para Apps Script: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, scriptURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("error creando petición HTTP a Apps Script: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error enviando petición a Apps Script: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusFound {
+		return fmt.Errorf("Apps Script devolvió estado no esperado: %s", resp.Status)
+	}
+
+	slog.Info("Notificación e invitaciones enviadas exitosamente a Google Apps Script", "invitados", len(usuariosAInvitar))
 	return nil
 }

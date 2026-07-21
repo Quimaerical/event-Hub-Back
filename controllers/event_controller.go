@@ -425,6 +425,26 @@ func (ctrl *EventController) HandleInscribirEvent(c *gin.Context) {
 	}
 
 	slog.Info("Inscripción exitosa", "evento_id", eventoID, "user_id", userID)
+
+	// Disparar envío automático de invitación a Google Calendar del usuario mediante Apps Script
+	if ctrl.calendarService != nil && emailStr != "" {
+		go func(eID int64, targetEmail string) {
+			bgCtx, bgCancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer bgCancel()
+			eventoObj, errEv := models.GetEventoByID(bgCtx, eID)
+			if errEv == nil && eventoObj != nil {
+				_ = ctrl.calendarService.SendAppsScriptNotification(
+					bgCtx,
+					eventoObj.Titulo,
+					eventoObj.FechaInicio,
+					eventoObj.FechaFin,
+					eventoObj.Descripcion.String,
+					[]string{targetEmail},
+				)
+			}
+		}(eventoID, emailStr)
+	}
+
 	if strings.Contains(c.GetHeader("Accept"), "application/json") {
 		c.JSON(http.StatusOK, gin.H{"message": "Inscripción confirmada"})
 		return
