@@ -335,3 +335,38 @@ func UpdateUsuarioRole(ctx context.Context, userID int, roleID int) error {
 	return err
 }
 
+// DeleteUsuario elimina un usuario y todos sus datos relacionados en cascada.
+func DeleteUsuario(ctx context.Context, userID int) error {
+	tx, err := config.DB.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	// 1. Eliminar pagos de las reservas del usuario
+	_, _ = tx.Exec(ctx, `DELETE FROM pagos WHERE reserva_id IN (SELECT id FROM reservas WHERE usuario_id = $1)`, userID)
+
+	// 2. Eliminar reservas del usuario
+	_, _ = tx.Exec(ctx, `DELETE FROM reservas WHERE usuario_id = $1`, userID)
+
+	// 3. Eliminar pagos de eventos organizados por el usuario
+	_, _ = tx.Exec(ctx, `DELETE FROM pagos WHERE reserva_id IN (SELECT id FROM reservas WHERE evento_id IN (SELECT id FROM eventos WHERE organizador_id = $1))`, userID)
+
+	// 4. Eliminar eventos organizados por el usuario (cascada en evento_categorias, reservas, recordatorios)
+	_, _ = tx.Exec(ctx, `DELETE FROM eventos WHERE organizador_id = $1`, userID)
+
+	// 5. Limpiar aprobador_id en otros eventos
+	_, _ = tx.Exec(ctx, `UPDATE eventos SET aprobador_id = NULL WHERE aprobador_id = $1`, userID)
+
+	// 6. Limpiar usuario_modificador_id en auditoria_log
+	_, _ = tx.Exec(ctx, `UPDATE auditoria_log SET usuario_modificador_id = NULL WHERE usuario_modificador_id = $1`, userID)
+
+	// 7. Eliminar el registro del usuario
+	_, err = tx.Exec(ctx, `DELETE FROM usuarios WHERE id = $1`, userID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+

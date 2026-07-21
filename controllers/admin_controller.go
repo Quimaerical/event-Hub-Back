@@ -62,3 +62,21 @@ func (ctrl *AdminController) UpdateUserRole(c *gin.Context) {
 
 	c.Redirect(http.StatusSeeOther, "/admin/usuarios")
 }
+
+// DeleteUser permite a un administrador eliminar cualquier cuenta de usuario.
+func (ctrl *AdminController) DeleteUser(c *gin.Context) {
+	userIDStr := c.Param("id")
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		c.Redirect(http.StatusSeeOther, "/admin/usuarios")
+		return
+	}
+
+	ctx := c.Request.Context()
+	err = models.DeleteUsuario(ctx, userID)
+	if err != nil {
+		log.Printf("Error al eliminar usuario %d por el admin: %v", userID, err)
+	}
+
+	c.Redirect(http.StatusSeeOther, "/admin/usuarios")
+}

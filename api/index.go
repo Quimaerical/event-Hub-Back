@@ -227,6 +227,7 @@ func initApp() {
 		perfilProtegido.GET("", profileCtrl.ShowProfile)
 		perfilProtegido.POST("", profileCtrl.UpdateProfile)
 		perfilProtegido.POST("/password", profileCtrl.UpdatePassword)
+		perfilProtegido.POST("/eliminar", profileCtrl.DeleteAccount)
 		perfilProtegido.POST("/fcm-token", authCtrl.HandleUpdateFCMToken)
 	}
 
@@ -254,6 +255,7 @@ func initApp() {
 	{
 		adminGroup.GET("/usuarios", adminCtrl.ShowUsers)
 		adminGroup.POST("/usuarios/:id/role", adminCtrl.UpdateUserRole)
+		adminGroup.POST("/usuarios/:id/eliminar", adminCtrl.DeleteUser)
 	}
 
 	app = r

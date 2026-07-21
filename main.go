@@ -236,6 +236,7 @@ func main() {
 		perfilProtegido.GET("", profileCtrl.ShowProfile)
 		perfilProtegido.POST("", profileCtrl.UpdateProfile)
 		perfilProtegido.POST("/password", profileCtrl.UpdatePassword)
+		perfilProtegido.POST("/eliminar", profileCtrl.DeleteAccount)
 		perfilProtegido.POST("/fcm-token", authCtrl.HandleUpdateFCMToken)
 	}
 
@@ -263,6 +264,7 @@ func main() {
 	{
 		adminGroup.GET("/usuarios", adminCtrl.ShowUsers)
 		adminGroup.POST("/usuarios/:id/role", adminCtrl.UpdateUserRole)
+		adminGroup.POST("/usuarios/:id/eliminar", adminCtrl.DeleteUser)
 	}
 
 	// 10. Iniciar Servidor
