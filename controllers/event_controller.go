@@ -347,14 +347,17 @@ func (ctrl *EventController) HandleGetEvent(c *gin.Context) {
 	// Comprobar estado de autenticación y rol del usuario
 	var userID int64
 	var roleID int
-	if uVal, exists := c.Get("userID"); exists {
-		if id, ok := uVal.(int64); ok {
-			userID = id
-		}
+	if uID, err := extractUserID(c); err == nil {
+		userID = uID
 	}
-	if rVal, exists := c.Get("role_id"); exists {
-		if r, ok := rVal.(int); ok {
+	if rVal, exists := c.Get("roleID"); exists {
+		switch r := rVal.(type) {
+		case int:
 			roleID = r
+		case int64:
+			roleID = int(r)
+		case float64:
+			roleID = int(r)
 		}
 	}
 
@@ -387,6 +390,7 @@ func (ctrl *EventController) HandleGetEvent(c *gin.Context) {
 		"esAdminOrApprover": esAdminOrApprover,
 		"userID":            userID,
 		"email":             email,
+		"roleID":            roleID,
 	}
 
 	responderDual(c, http.StatusOK, "events/detail.html", data, data)
