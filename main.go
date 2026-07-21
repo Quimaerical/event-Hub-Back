@@ -76,7 +76,9 @@ func loadTemplates(r *gin.Engine) {
 			isLayoutOrPartial := strings.Contains(cleanPath, "layouts/") || strings.Contains(cleanPath, "partials/")
 
 			if !isLayoutOrPartial {
-				tmpl := template.New(cleanPath)
+				tmpl := template.New(cleanPath).Funcs(template.FuncMap{
+					"add": func(a, b int) int { return a + b },
+				})
 				content, errRead := views.FS.ReadFile(cleanPath)
 				if errRead != nil {
 					log.Printf("Error leyendo plantilla embebida %s: %v", cleanPath, errRead)
@@ -243,22 +245,23 @@ func main() {
 		perfilProtegido.POST("/fcm-token", authCtrl.HandleUpdateFCMToken)
 	}
 
-	protected := router.Group("/eventos")
-	protected.Use(middlewares.AuthRequired())
+	eventosProtegidos := router.Group("/eventos")
+	eventosProtegidos.Use(middlewares.AuthRequired())
 	{
-		protected.GET("/crear", eventCtrl.ShowCreate)
-		protected.POST("/crear", eventCtrl.HandleCreate)
-		protected.POST("/sugerir-descripcion", eventCtrl.SuggestDescription)
-		protected.GET("/", eventCtrl.HandleListEvents)
-		protected.POST("/:id/inscribir", eventCtrl.HandleInscribirEvent)
-		protected.POST("/:id/cancelar-inscripcion", eventCtrl.HandleCancelarInscripcion)
-		protected.GET("/:id/editar", eventCtrl.ShowEdit)
-		protected.POST("/:id/editar", eventCtrl.HandleEdit)
-		protected.POST("/:id/aprobar", eventCtrl.HandleAprobarEvent)
-		protected.POST("/:id/rechazar", eventCtrl.HandleRechazarEvent)
-		protected.PATCH("/:id/estado", eventCtrl.HandleActualizarEstado)
-		protected.POST("/:id/eliminar", eventCtrl.HandleDeleteEvent)
-		protected.DELETE("/:id", eventCtrl.HandleDeleteEvent)
+		eventosProtegidos.GET("/crear", eventCtrl.ShowCreate)
+		eventosProtegidos.POST("/crear", eventCtrl.HandleCreate)
+		eventosProtegidos.POST("/sugerir-descripcion", eventCtrl.SuggestDescription)
+		eventosProtegidos.GET("/", eventCtrl.HandleListEvents)
+		eventosProtegidos.GET("/:id/asistentes", eventCtrl.HandleGetAsistentes)
+		eventosProtegidos.POST("/:id/inscribir", eventCtrl.HandleInscribirEvent)
+		eventosProtegidos.POST("/:id/cancelar-inscripcion", eventCtrl.HandleCancelarInscripcion)
+		eventosProtegidos.GET("/:id/editar", eventCtrl.ShowEdit)
+		eventosProtegidos.POST("/:id/editar", eventCtrl.HandleEdit)
+		eventosProtegidos.POST("/:id/aprobar", eventCtrl.HandleAprobarEvent)
+		eventosProtegidos.POST("/:id/rechazar", eventCtrl.HandleRechazarEvent)
+		eventosProtegidos.PATCH("/:id/estado", eventCtrl.HandleActualizarEstado)
+		eventosProtegidos.POST("/:id/eliminar", eventCtrl.HandleDeleteEvent)
+		eventosProtegidos.DELETE("/:id", eventCtrl.HandleDeleteEvent)
 	}
 
 	adminCtrl := controllers.NewAdminController()

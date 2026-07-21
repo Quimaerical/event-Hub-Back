@@ -228,6 +228,64 @@
                     </div>
                 </div>
             {{ end }}
+
+            <!-- Seccion de Usuarios Inscritos / Asistentes (Pública: Nombres para todos, detalles sensibles para Organizadores/Admins) -->
+            <div class="glass-card rounded-2xl p-6 border border-white/10 space-y-4 animate-fade-in-up mt-8">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center space-x-3">
+                        <span class="p-2 bg-brand-500/20 text-brand-300 rounded-xl text-lg">👥</span>
+                        <div>
+                            <h3 class="text-lg font-bold text-white">Usuarios Inscritos</h3>
+                            <p class="text-xs text-slate-400">
+                                {{ if .puedeVerDetallesSensibles }}
+                                    Detalles completos visibles por ser organizador/administrador
+                                {{ else }}
+                                    Lista pública de participantes confirmados
+                                {{ end }}
+                            </p>
+                        </div>
+                    </div>
+                    <span class="px-3.5 py-1.5 text-xs font-bold bg-brand-500/20 border border-brand-500/30 text-brand-300 rounded-full">
+                        {{ len .asistentes }} / {{ .evento.CapacidadMaxima }} Inscritos
+                    </span>
+                </div>
+
+                {{ if .asistentes }}
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-300 border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[11px]">
+                                    <th class="py-3 px-3">#</th>
+                                    <th class="py-3 px-3">Nombre</th>
+                                    {{ if .puedeVerDetallesSensibles }}
+                                        <th class="py-3 px-3">Correo Electrónico</th>
+                                        <th class="py-3 px-3">Departamento</th>
+                                    {{ end }}
+                                    <th class="py-3 px-3">Fecha de Inscripción</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60">
+                                {{ $sensible := .puedeVerDetallesSensibles }}
+                                {{ range $index, $a := .asistentes }}
+                                    <tr class="hover:bg-slate-900/40 transition">
+                                        <td class="py-3 px-3 font-semibold text-brand-400">{{ add $index 1 }}</td>
+                                        <td class="py-3 px-3 font-medium text-white">{{ $a.Nombre }}</td>
+                                        {{ if $sensible }}
+                                            <td class="py-3 px-3 text-slate-300">{{ $a.Email }}</td>
+                                            <td class="py-3 px-3 text-slate-400">{{ if $a.Departamento }}{{ $a.Departamento }}{{ else }}-{{ end }}</td>
+                                        {{ end }}
+                                        <td class="py-3 px-3 text-slate-400">{{ $a.FechaReserva.Format "02/01/2006 03:04 PM" }}</td>
+                                    </tr>
+                                {{ end }}
+                            </tbody>
+                        </table>
+                    </div>
+                {{ else }}
+                    <div class="text-center py-6 bg-slate-900/40 rounded-xl border border-slate-800 text-slate-400 text-sm">
+                        ℹ️ Aún no hay usuarios inscritos en este evento. ¡Sé el primero en inscribirte!
+                    </div>
+                {{ end }}
+            </div>
         </article>
     {{ end }}
 </div>

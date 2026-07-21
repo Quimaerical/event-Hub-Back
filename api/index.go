@@ -81,7 +81,9 @@ func loadTemplates(r *gin.Engine) {
 			isLayoutOrPartial := strings.Contains(cleanPath, "layouts/") || strings.Contains(cleanPath, "partials/")
 
 			if !isLayoutOrPartial {
-				tmpl := template.New(cleanPath)
+				tmpl := template.New(cleanPath).Funcs(template.FuncMap{
+					"add": func(a, b int) int { return a + b },
+				})
 				content, errRead := views.FS.ReadFile(cleanPath)
 				if errRead != nil {
 					log.Printf("Error leyendo plantilla embebida %s: %v", cleanPath, errRead)
@@ -241,6 +243,7 @@ func initApp() {
 		protected.POST("/crear", eventCtrl.HandleCreate)
 		protected.POST("/sugerir-descripcion", eventCtrl.SuggestDescription)
 		protected.GET("/", eventCtrl.HandleListEvents)
+		protected.GET("/:id/asistentes", eventCtrl.HandleGetAsistentes)
 		protected.POST("/:id/inscribir", eventCtrl.HandleInscribirEvent)
 		protected.POST("/:id/cancelar-inscripcion", eventCtrl.HandleCancelarInscripcion)
 		protected.GET("/:id/editar", eventCtrl.ShowEdit)

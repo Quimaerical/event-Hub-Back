@@ -398,22 +398,104 @@ func (ctrl *EventController) HandleGetEvent(c *gin.Context) {
 		estaInscrito, _ = models.EstaInscrito(ctx, eventoID, userID)
 	}
 
+	// Obtener lista de asistentes para todos los usuarios
+	asistentesRaw, _ := models.GetAsistentesPorEvento(ctx, eventoID)
+	
+	// Si NO es el creador ni admin/aprobador, ocultamos correos y teléfonos por privacidad
+	puedeVerDetallesSensibles := esCreador || esAdminOrApprover
+	var asistentes []models.AsistenteInfo
+	if puedeVerDetallesSensibles {
+		asistentes = asistentesRaw
+	} else {
+		asistentes = make([]models.AsistenteInfo, len(asistentesRaw))
+		for i, a := range asistentesRaw {
+			asistentes[i] = models.AsistenteInfo{
+				UsuarioID:    a.UsuarioID,
+				Nombre:       a.Nombre,
+				FechaReserva: a.FechaReserva,
+			}
+		}
+	}
+
 	email, _ := c.Get("email")
 
 	data := gin.H{
-		"evento":            evento,
-		"categorias":        categorias,
-		"conteoInscritos":   conteoInscritos,
-		"cuposDisponibles":  cuposDisponibles,
-		"estaInscrito":      estaInscrito,
-		"esCreador":         esCreador,
-		"esAdminOrApprover": esAdminOrApprover,
-		"userID":            userID,
-		"email":             email,
-		"roleID":            roleID,
+		"evento":                    evento,
+		"categorias":                categorias,
+		"conteoInscritos":           conteoInscritos,
+		"cuposDisponibles":          cuposDisponibles,
+		"estaInscrito":              estaInscrito,
+		"esCreador":                 esCreador,
+		"esAdminOrApprover":         esAdminOrApprover,
+		"puedeVerDetallesSensibles": puedeVerDetallesSensibles,
+		"asistentes":                asistentes,
+		"userID":                    userID,
+		"email":                     email,
+		"roleID":                    roleID,
 	}
 
 	responderDual(c, http.StatusOK, "events/detail.html", data, data)
+}
+
+// HandleGetAsistentes devuelve un JSON con la lista de usuarios inscritos (nombres para todos, datos completos para creador/admin)
+func (ctrl *EventController) HandleGetAsistentes(c *gin.Context) {
+	eventoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusBadRequest, "ID de evento inválido")
+		return
+	}
+
+	userID, _ := extractUserID(c)
+	ctx := c.Request.Context()
+	evento, err := models.GetEventoByID(ctx, eventoID)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusNotFound, "Evento no encontrado")
+		return
+	}
+
+	roleIDVal, _ := c.Get("roleID")
+	var roleID int
+	if roleIDVal != nil {
+		switch r := roleIDVal.(type) {
+		case int:
+			roleID = r
+		case int64:
+			roleID = int(r)
+		case float64:
+			roleID = int(r)
+		}
+	}
+
+	esCreador := userID > 0 && evento.OrganizadorID == userID
+	esAdminOrApprover := roleID == 1 || roleID == 2 || roleID == 3
+	puedeVerDetallesSensibles := esCreador || esAdminOrApprover
+
+	asistentesRaw, err := models.GetAsistentesPorEvento(ctx, eventoID)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusInternalServerError, "Error al cargar la lista de asistentes")
+		return
+	}
+
+	var asistentes []models.AsistenteInfo
+	if puedeVerDetallesSensibles {
+		asistentes = asistentesRaw
+	} else {
+		asistentes = make([]models.AsistenteInfo, len(asistentesRaw))
+		for i, a := range asistentesRaw {
+			asistentes[i] = models.AsistenteInfo{
+				UsuarioID:    a.UsuarioID,
+				Nombre:       a.Nombre,
+				FechaReserva: a.FechaReserva,
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"evento_id":                  eventoID,
+		"asistentes":                 asistentes,
+		"total":                      len(asistentes),
+		"puedeVerDetallesSensibles":  puedeVerDetallesSensibles,
+	})
 }
 
 func (ctrl *EventController) HandleInscribirEvent(c *gin.Context) {

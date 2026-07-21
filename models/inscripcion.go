@@ -220,3 +220,42 @@ func CancelarInscripcion(ctx context.Context, inscripcionID, usuarioID int64, es
 
 	return nil
 }
+
+type AsistenteInfo struct {
+	UsuarioID    int64     `json:"usuario_id"`
+	Nombre       string    `json:"nombre"`
+	Email        string    `json:"email"`
+	Departamento string    `json:"departamento"`
+	Telefono     string    `json:"telefono"`
+	FechaReserva time.Time `json:"fecha_reserva"`
+}
+
+// GetAsistentesPorEvento obtiene la lista de todos los usuarios con reserva confirmada para un evento.
+func GetAsistentesPorEvento(ctx context.Context, eventoID int64) ([]AsistenteInfo, error) {
+	query := `
+		SELECT 
+			u.id, u.nombre, u.email, 
+			COALESCE(u.departamento, ''), COALESCE(u.telefono, ''), 
+			r.fecha_reserva
+		FROM reservas r
+		JOIN usuarios u ON r.usuario_id = u.id
+		WHERE r.evento_id = $1 AND r.estado = 'confirmada'
+		ORDER BY r.fecha_reserva ASC
+	`
+	rows, err := config.DB.Query(ctx, query, eventoID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var asistentes []AsistenteInfo
+	for rows.Next() {
+		var a AsistenteInfo
+		err := rows.Scan(&a.UsuarioID, &a.Nombre, &a.Email, &a.Departamento, &a.Telefono, &a.FechaReserva)
+		if err != nil {
+			return nil, err
+		}
+		asistentes = append(asistentes, a)
+	}
+	return asistentes, nil
+}
