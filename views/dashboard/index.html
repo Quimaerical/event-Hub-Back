@@ -44,6 +44,12 @@
                                 <h2 class="text-xl font-bold text-white line-clamp-2 group-hover:text-brand-400 transition duration-150">
                                     {{ .Titulo }}
                                 </h2>
+
+                                {{ if .ImagenURL.Valid }}
+                                    <div class="w-full h-40 overflow-hidden rounded-xl border border-white/10 my-2">
+                                        <img src="{{ .ImagenURL.String }}" alt="{{ .Titulo }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                                    </div>
+                                {{ end }}
                                 
                                 <!-- Description -->
                                 <p class="text-slate-400 text-sm line-clamp-3 leading-relaxed">

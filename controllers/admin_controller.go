@@ -32,9 +32,15 @@ func (ctrl *AdminController) ShowUsers(c *gin.Context) {
 		log.Printf("Error obteniendo roles en AdminController: %v", err)
 	}
 
+	userID, _ := c.Get("userID")
+	email, _ := c.Get("email")
+
 	c.HTML(http.StatusOK, "admin/users.html", gin.H{
 		"usuarios": usuarios,
 		"roles":    roles,
+		"userID":   userID,
+		"email":    email,
+		"roleID":   1,
 	})
 }
 

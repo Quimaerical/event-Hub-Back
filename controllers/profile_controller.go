@@ -43,6 +43,7 @@ func (ctrl *ProfileController) ShowProfile(c *gin.Context) {
 	c.HTML(http.StatusOK, "perfil/index.html", gin.H{
 		"userID":       userID,
 		"email":        user.Email,
+		"roleID":       user.RoleID,
 		"user":         user,
 		"roleName":     roleName,
 		"departamento": user.Departamento.String,

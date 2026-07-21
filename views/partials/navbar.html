@@ -10,14 +10,14 @@
             </div>
 
             <!-- Center Nav Links -->
-            <nav class="hidden md:flex space-x-8 text-sm font-medium">
-                <a href="/" class="text-slate-200 hover:text-white transition">Cartelera</a>
+            <nav id="main-nav" class="hidden md:flex space-x-6 items-center text-sm font-medium">
+                <a href="/" data-nav="cartelera" class="text-slate-300 hover:text-white transition">Cartelera</a>
                 {{ if .userID }}
-                    <a href="/tablon" class="text-slate-400 hover:text-white transition">Mi Tablón</a>
-                    <a href="/eventos/crear" class="text-slate-400 hover:text-white transition">Crear Evento</a>
-                    <a href="/perfil" class="text-slate-400 hover:text-white transition">Mi Perfil</a>
+                    <a href="/tablon" data-nav="tablon" class="text-slate-400 hover:text-white transition">Mi Tablón</a>
+                    <a href="/eventos/crear" data-nav="crear" class="text-slate-400 hover:text-white transition">Crear Evento</a>
+                    <a href="/perfil" data-nav="perfil" class="text-slate-400 hover:text-white transition">Mi Perfil</a>
                     {{ if eq .roleID 1 }}
-                        <a href="/admin/usuarios" class="text-amber-400 font-semibold hover:text-amber-300 transition">🛡️ Admin</a>
+                        <a href="/admin/usuarios" data-nav="admin" class="text-amber-400 font-semibold hover:text-amber-300 transition">🛡️ Admin</a>
                     {{ end }}
                 {{ end }}
             </nav>
@@ -38,4 +38,26 @@
         </div>
     </div>
 </header>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const currentPath = window.location.pathname;
+        const links = document.querySelectorAll('#main-nav a');
+        
+        links.forEach(link => {
+            const href = link.getAttribute('href');
+            let isActive = false;
+            
+            if (href === '/' && currentPath === '/') {
+                isActive = true;
+            } else if (href !== '/' && (currentPath === href || currentPath.startsWith(href))) {
+                isActive = true;
+            }
+
+            if (isActive) {
+                link.className = "text-brand-400 font-bold bg-brand-500/15 px-3.5 py-1.5 rounded-xl border border-brand-500/30 shadow-sm shadow-brand-500/20 transition";
+            }
+        });
+    });
+</script>
 {{ end }}

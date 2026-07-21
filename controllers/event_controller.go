@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"math/rand"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -131,10 +134,11 @@ func (ctrl *EventController) ShowCreate(c *gin.Context) {
 
 	userID, _ := c.Get("userID")
 	email, _ := c.Get("email")
+	roleID, _ := c.Get("roleID")
 
 	responderDual(c, http.StatusOK, "events/create.html",
-		gin.H{"categorias": categories, "espacios": espacios, "userID": userID, "email": email},
-		gin.H{"categorias": categories, "espacios": espacios, "userID": userID, "email": email},
+		gin.H{"categorias": categories, "espacios": espacios, "userID": userID, "email": email, "roleID": roleID},
+		gin.H{"categorias": categories, "espacios": espacios, "userID": userID, "email": email, "roleID": roleID},
 	)
 }
 
@@ -222,6 +226,21 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 		return
 	}
 
+	// Procesar imagen cargada desde el dispositivo
+	var imagenURL string
+	file, errFile := c.FormFile("imagen")
+	if errFile == nil && file != nil {
+		ext := strings.ToLower(filepath.Ext(file.Filename))
+		if ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp" || ext == ".gif" {
+			_ = os.MkdirAll("uploads", 0755)
+			filename := fmt.Sprintf("event_%d_%d%s", time.Now().UnixNano(), rand.Intn(1000), ext)
+			dst := filepath.Join("uploads", filename)
+			if errSave := c.SaveUploadedFile(file, dst); errSave == nil {
+				imagenURL = "/uploads/" + filename
+			}
+		}
+	}
+
 	evento := models.Evento{
 		Titulo:          form.Titulo,
 		Descripcion:     pgtype.Text{String: form.Descripcion, Valid: form.Descripcion != ""},
@@ -230,6 +249,7 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 		FechaInicio:     fechaInicio,
 		FechaFin:        fechaFin,
 		CapacidadMaxima: form.CapacidadMaxima,
+		ImagenURL:       pgtype.Text{String: imagenURL, Valid: imagenURL != ""},
 	}
 
 	err = models.CreateEvento(ctx, &evento, form.Categorias)
@@ -684,6 +704,20 @@ func (ctrl *EventController) HandleEdit(c *gin.Context) {
 	eventoOriginal.FechaInicio = fechaInicio
 	eventoOriginal.FechaFin = fechaFin
 	eventoOriginal.CapacidadMaxima = form.CapacidadMaxima
+
+	// Procesar nueva imagen cargada desde el dispositivo (opcional)
+	file, errFile := c.FormFile("imagen")
+	if errFile == nil && file != nil {
+		ext := strings.ToLower(filepath.Ext(file.Filename))
+		if ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp" || ext == ".gif" {
+			_ = os.MkdirAll("uploads", 0755)
+			filename := fmt.Sprintf("event_%d_%d%s", time.Now().UnixNano(), rand.Intn(1000), ext)
+			dst := filepath.Join("uploads", filename)
+			if errSave := c.SaveUploadedFile(file, dst); errSave == nil {
+				eventoOriginal.ImagenURL = pgtype.Text{String: "/uploads/" + filename, Valid: true}
+			}
+		}
+	}
 
 	err = models.UpdateEvento(ctx, eventoOriginal, form.Categorias)
 	if err != nil {

@@ -214,6 +214,9 @@ func main() {
 		})
 	})
 
+	_ = os.MkdirAll("uploads", 0755)
+	router.Static("/uploads", "./uploads")
+
 	// 9. Registrar Rutas
 	router.GET("/", middlewares.CurrentUser(), dashboardCtrl.ShowDashboard)
 	router.GET("/eventos/:id", middlewares.CurrentUser(), eventCtrl.HandleGetEvent)

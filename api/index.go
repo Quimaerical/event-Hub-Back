@@ -206,6 +206,9 @@ func initApp() {
 		})
 	})
 
+	_ = os.MkdirAll("uploads", 0755)
+	r.Static("/uploads", "./uploads")
+
 	r.GET("/", middlewares.CurrentUser(), dashboardCtrl.ShowDashboard)
 	r.GET("/eventos/:id", middlewares.CurrentUser(), eventCtrl.HandleGetEvent)
 	r.GET("/login", authCtrl.ShowLogin)
