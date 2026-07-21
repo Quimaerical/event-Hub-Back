@@ -222,13 +222,13 @@ func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, a
 	}
 
 	transicionesValidas := map[string][]string{
-		EstadoSolicitado: {EstadoEnRevision, EstadoCancelado},
+		EstadoSolicitado: {EstadoAprobado, EstadoRechazado, EstadoEnRevision, EstadoCancelado},
 		EstadoEnRevision: {EstadoAprobado, EstadoRechazado, EstadoCancelado},
 		EstadoAprobado:   {EstadoProgramado, EstadoCancelado},
 		EstadoProgramado: {EstadoRealizado, EstadoCancelado},
 		EstadoRealizado:  {},
 		EstadoCancelado:  {},
-		EstadoRechazado:  {},
+		EstadoRechazado:  {EstadoSolicitado, EstadoAprobado},
 	}
 
 	esValida := false

@@ -223,7 +223,7 @@ BEGIN
     ELSIF (TG_OP = 'UPDATE') THEN
         v_operacion := 'UPDATE';
         v_registro_id := NEW.id::TEXT;
-        IF row_to_json(OLD) IS DISTINCT FROM row_to_json(NEW) THEN
+        IF row_to_json(OLD)::text IS DISTINCT FROM row_to_json(NEW)::text THEN
             INSERT INTO auditoria_log (tabla_afectada, operacion, registro_id, usuario_modificador_id, datos_anteriores, datos_nuevos)
             VALUES (TG_TABLE_NAME::TEXT, v_operacion, v_registro_id, v_usuario_id, row_to_json(OLD), row_to_json(NEW));
         END IF;

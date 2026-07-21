@@ -248,11 +248,7 @@
                 <script>
                     function confirmAccountDeletion() {
                         const input = document.getElementById('confirmacion').value;
-                        if (input.trim() !== 'ELIMINAR') {
-                            alert('Debes escribir exactamente la palabra ELIMINAR en mayúsculas para confirmar la eliminación de tu cuenta.');
-                            return false;
-                        }
-                        return confirm('⚠️ ALERTA FINAL: ¿Estás totalmente seguro de eliminar tu cuenta? Todos tus eventos e inscripciones se borrarán de forma irreversible.');
+                        return input.trim() === 'ELIMINAR';
                     }
                 </script>
             </div>
