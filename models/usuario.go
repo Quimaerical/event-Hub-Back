@@ -58,7 +58,7 @@ func CreateUsuario(ctx context.Context, u *Usuario) error {
 		if err == nil {
 			u.RoleID = role.ID
 		} else {
-			u.RoleID = 2 // Fallback default ID
+			u.RoleID = 4 // Fallback default ID ('usuario')
 		}
 	}
 

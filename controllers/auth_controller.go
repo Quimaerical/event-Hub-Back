@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"log"
 	"net/http"
+	"strings"
 
 	"event-hub/middlewares"
 	"event-hub/models"
@@ -34,7 +35,7 @@ func (ctrl *AuthController) ShowRegister(c *gin.Context) {
 
 // HandleLogin processes credential submissions.
 func (ctrl *AuthController) HandleLogin(c *gin.Context) {
-	email := c.PostForm("email")
+	email := strings.ToLower(strings.TrimSpace(c.PostForm("email")))
 	password := c.PostForm("password")
 
 	ctx := c.Request.Context()
@@ -60,29 +61,27 @@ func (ctrl *AuthController) HandleLogin(c *gin.Context) {
 
 // HandleRegister processes user signup requests.
 func (ctrl *AuthController) HandleRegister(c *gin.Context) {
-	var form struct {
-		Nombre   string `form:"nombre" binding:"required"`
-		Email    string `form:"email" binding:"required,email"`
-		Password string `form:"password" binding:"required"`
-	}
+	nombre := strings.TrimSpace(c.PostForm("nombre"))
+	email := strings.ToLower(strings.TrimSpace(c.PostForm("email")))
+	password := c.PostForm("password")
 
-	if err := c.ShouldBind(&form); err != nil {
+	if nombre == "" || email == "" || password == "" {
 		c.HTML(http.StatusBadRequest, "auth/register.html", gin.H{
-			"error": "Por favor completa todos los campos correctamente: " + err.Error(),
+			"error": "Por favor completa todos los campos (nombre, correo y contraseña)",
 		})
 		return
 	}
 
 	ctx := c.Request.Context()
 	user := &models.Usuario{
-		Nombre:   form.Nombre,
-		Email:    form.Email,
-		Password: form.Password,
+		Nombre:   nombre,
+		Email:    email,
+		Password: password,
 	}
 
 	err := models.CreateUsuario(ctx, user)
 	if err != nil {
-		log.Printf("Error registrando usuario (%s): %v", form.Email, err)
+		log.Printf("Error registrando usuario (%s): %v", email, err)
 		c.HTML(http.StatusConflict, "auth/register.html", gin.H{
 			"error": "Error al registrar cuenta: " + err.Error(),
 		})
@@ -104,7 +103,9 @@ func (ctrl *AuthController) HandleRegister(c *gin.Context) {
 // GoogleLogin redirects user to Google OAuth screen.
 func (ctrl *AuthController) GoogleLogin(c *gin.Context) {
 	state := generateState()
-	c.SetCookie("oauth_state", state, 300, "/", "", false, true)
+	host := c.Request.Host
+	secure := !strings.HasPrefix(host, "localhost:") && !strings.HasPrefix(host, "127.0.0.1:")
+	c.SetCookie("oauth_state", state, 300, "/", "", secure, true)
 	url := ctrl.oauthService.GetGoogleAuthURL(state)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
@@ -112,7 +113,9 @@ func (ctrl *AuthController) GoogleLogin(c *gin.Context) {
 // GitHubLogin redirects user to GitHub OAuth screen.
 func (ctrl *AuthController) GitHubLogin(c *gin.Context) {
 	state := generateState()
-	c.SetCookie("oauth_state", state, 300, "/", "", false, true)
+	host := c.Request.Host
+	secure := !strings.HasPrefix(host, "localhost:") && !strings.HasPrefix(host, "127.0.0.1:")
+	c.SetCookie("oauth_state", state, 300, "/", "", secure, true)
 	url := ctrl.oauthService.GetGitHubAuthURL(state)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
