@@ -16,6 +16,9 @@
                     <a href="/tablon" class="text-slate-400 hover:text-white transition">Mi Tablón</a>
                     <a href="/eventos/crear" class="text-slate-400 hover:text-white transition">Crear Evento</a>
                     <a href="/perfil" class="text-slate-400 hover:text-white transition">Mi Perfil</a>
+                    {{ if eq .roleID 1 }}
+                        <a href="/admin/usuarios" class="text-amber-400 font-semibold hover:text-amber-300 transition">🛡️ Admin</a>
+                    {{ end }}
                 {{ end }}
             </nav>
 

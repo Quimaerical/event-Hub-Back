@@ -842,6 +842,58 @@ func (ctrl *EventController) HandleCancelEvent(c *gin.Context) {
 	c.Redirect(http.StatusSeeOther, "/eventos/")
 }
 
+func (ctrl *EventController) HandleDeleteEvent(c *gin.Context) {
+	eventoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusBadRequest, "ID de evento inválido")
+		return
+	}
+	ctx := c.Request.Context()
+	evento, err := models.GetEventoByID(ctx, eventoID)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusNotFound, "Evento no encontrado")
+		return
+	}
+
+	userID, _ := extractUserID(c)
+	roleIDVal, _ := c.Get("roleID")
+	var roleID int
+	if r, ok := roleIDVal.(int); ok {
+		roleID = r
+	} else if r64, ok := roleIDVal.(int64); ok {
+		roleID = int(r64)
+	} else if rf, ok := roleIDVal.(float64); ok {
+		roleID = int(rf)
+	}
+
+	esCreador := userID > 0 && evento.OrganizadorID == userID
+	esAdminOrApprover := roleID == 1 || roleID == 2
+
+	if !esCreador && !esAdminOrApprover {
+		slog.Warn("Acceso denegado para eliminación de evento", "evento_id", eventoID, "user_id", userID)
+		responderDual(c, http.StatusForbidden, "events/detail.html",
+			gin.H{"error": "No tienes permisos para eliminar este evento"},
+			gin.H{"error": "No tienes permisos para eliminar este evento"})
+		return
+	}
+
+	err = models.DeleteEvento(ctx, eventoID)
+	if err != nil {
+		slog.Error("Error al eliminar evento", "evento_id", eventoID, "error", err)
+		responderDual(c, http.StatusInternalServerError, "events/detail.html",
+			gin.H{"error": "Error al eliminar evento: " + err.Error()},
+			gin.H{"error": "Error al eliminar evento: " + err.Error()})
+		return
+	}
+
+	slog.Info("Evento eliminado permanentemente", "evento_id", eventoID, "por_user_id", userID)
+	if strings.Contains(c.GetHeader("Accept"), "application/json") {
+		c.JSON(http.StatusOK, gin.H{"mensaje": "Evento eliminado exitosamente"})
+		return
+	}
+	c.Redirect(http.StatusSeeOther, "/")
+}
+
 // ==========================================
 // SERVICIOS EXTERNOS (Gemini + Rate Limiting)
 // ==========================================

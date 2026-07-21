@@ -157,11 +157,16 @@
                         </a>
                     {{ end }}
 
-                    <!-- Edit / Cancel Buttons for Creator / Admin -->
+                    <!-- Edit / Delete Buttons for Creator / Admin / Approver -->
                     {{ if or .esCreador .esAdminOrApprover }}
                         <a href="/eventos/{{ .evento.ID }}/editar" class="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl transition text-center">
                             ✏️ Editar Evento
                         </a>
+                        <form action="/eventos/{{ .evento.ID }}/eliminar" method="POST" class="inline">
+                            <button type="submit" onclick="return confirm('¿Estás seguro de que deseas eliminar permanentemente este evento? Esta acción no se puede deshacer.')" class="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 rounded-xl transition text-center">
+                                🗑️ Eliminar Evento
+                            </button>
+                        </form>
                     {{ end }}
                 </div>
             </div>

@@ -463,3 +463,11 @@ func UpdateEvento(ctx context.Context, e *Evento, categoryIDs []int) error {
 
 	return tx.Commit(ctx)
 }
+
+// DeleteEvento elimina permanentemente un evento y sus registros vinculados.
+func DeleteEvento(ctx context.Context, id int64) error {
+	_, _ = config.DB.Exec(ctx, `DELETE FROM evento_categorias WHERE evento_id = $1`, id)
+	_, _ = config.DB.Exec(ctx, `DELETE FROM reservas WHERE evento_id = $1`, id)
+	_, err := config.DB.Exec(ctx, `DELETE FROM eventos WHERE id = $1`, id)
+	return err
+}

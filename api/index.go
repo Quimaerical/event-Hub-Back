@@ -244,7 +244,16 @@ func initApp() {
 		protected.POST("/:id/aprobar", eventCtrl.HandleAprobarEvent)
 		protected.POST("/:id/rechazar", eventCtrl.HandleRechazarEvent)
 		protected.PATCH("/:id/estado", eventCtrl.HandleActualizarEstado)
-		protected.DELETE("/:id", eventCtrl.HandleCancelEvent)
+		protected.POST("/:id/eliminar", eventCtrl.HandleDeleteEvent)
+		protected.DELETE("/:id", eventCtrl.HandleDeleteEvent)
+	}
+
+	adminCtrl := controllers.NewAdminController()
+	adminGroup := r.Group("/admin")
+	adminGroup.Use(middlewares.AuthRequired(), middlewares.AdminRequired())
+	{
+		adminGroup.GET("/usuarios", adminCtrl.ShowUsers)
+		adminGroup.POST("/usuarios/:id/role", adminCtrl.UpdateUserRole)
 	}
 
 	app = r

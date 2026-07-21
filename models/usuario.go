@@ -292,3 +292,46 @@ func UpdateUsuarioPassword(ctx context.Context, userID int, currentPassword, new
 	return err
 }
 
+type UsuarioWithRole struct {
+	ID            int       `json:"id"`
+	Nombre        string    `json:"nombre"`
+	Email         string    `json:"email"`
+	RoleID        int       `json:"role_id"`
+	RoleNombre    string    `json:"role_nombre"`
+	OAuthProvider string    `json:"oauth_provider"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
+// GetAllUsuariosWithRoles recupera todos los usuarios con el nombre de su rol.
+func GetAllUsuariosWithRoles(ctx context.Context) ([]UsuarioWithRole, error) {
+	query := `
+		SELECT u.id, u.nombre, u.email, u.role_id, r.nombre AS role_nombre, u.oauth_provider, u.fecha_registro
+		FROM usuarios u
+		JOIN roles r ON u.role_id = r.id
+		ORDER BY u.id ASC
+	`
+	rows, err := config.DB.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var usuarios []UsuarioWithRole
+	for rows.Next() {
+		var u UsuarioWithRole
+		if err := rows.Scan(&u.ID, &u.Nombre, &u.Email, &u.RoleID, &u.RoleNombre, &u.OAuthProvider, &u.CreatedAt); err != nil {
+			return nil, err
+		}
+		usuarios = append(usuarios, u)
+	}
+
+	return usuarios, rows.Err()
+}
+
+// UpdateUsuarioRole actualiza el rol de un usuario específico.
+func UpdateUsuarioRole(ctx context.Context, userID int, roleID int) error {
+	query := `UPDATE usuarios SET role_id = $1 WHERE id = $2`
+	_, err := config.DB.Exec(ctx, query, roleID, userID)
+	return err
+}
+
