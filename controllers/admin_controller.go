@@ -7,6 +7,7 @@ import (
 
 	"event-hub/models"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type AdminController struct{}
@@ -15,7 +16,7 @@ func NewAdminController() *AdminController {
 	return &AdminController{}
 }
 
-// ShowUsers muestra el panel de administración de usuarios y gestión de roles.
+// ShowUsers muestra el panel de administración de usuarios, gestión de roles y ubicaciones/espacios.
 func (ctrl *AdminController) ShowUsers(c *gin.Context) {
 	ctx := c.Request.Context()
 	usuarios, err := models.GetAllUsuariosWithRoles(ctx)
@@ -32,12 +33,18 @@ func (ctrl *AdminController) ShowUsers(c *gin.Context) {
 		log.Printf("Error obteniendo roles en AdminController: %v", err)
 	}
 
+	espacios, err := models.GetAllEspacios(ctx)
+	if err != nil {
+		log.Printf("Error obteniendo espacios en AdminController: %v", err)
+	}
+
 	userID, _ := c.Get("userID")
 	email, _ := c.Get("email")
 
 	c.HTML(http.StatusOK, "admin/users.html", gin.H{
 		"usuarios": usuarios,
 		"roles":    roles,
+		"espacios": espacios,
 		"userID":   userID,
 		"email":    email,
 		"roleID":   1,
@@ -82,6 +89,33 @@ func (ctrl *AdminController) DeleteUser(c *gin.Context) {
 	err = models.DeleteUsuario(ctx, userID)
 	if err != nil {
 		log.Printf("Error al eliminar usuario %d por el admin: %v", userID, err)
+	}
+
+	c.Redirect(http.StatusSeeOther, "/admin/usuarios")
+}
+
+// CreateEspacio permite a un administrador agregar un nuevo espacio/ubicación para eventos.
+func (ctrl *AdminController) CreateEspacio(c *gin.Context) {
+	nombre := c.PostForm("nombre")
+	tipo := c.PostForm("tipo")
+	capacidadStr := c.PostForm("capacidad")
+	ubicacionStr := c.PostForm("ubicacion")
+
+	capacidad, err := strconv.Atoi(capacidadStr)
+	if err != nil || capacidad <= 0 {
+		capacidad = 50
+	}
+
+	espacio := models.Espacio{
+		Nombre:    nombre,
+		Tipo:      tipo,
+		Capacidad: capacidad,
+		Ubicacion: pgtype.Text{String: ubicacionStr, Valid: ubicacionStr != ""},
+	}
+
+	ctx := c.Request.Context()
+	if err := models.CreateEspacio(ctx, &espacio); err != nil {
+		log.Printf("Error al crear espacio por el admin: %v", err)
 	}
 
 	c.Redirect(http.StatusSeeOther, "/admin/usuarios")

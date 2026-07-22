@@ -262,6 +262,7 @@ func initApp() {
 		adminGroup.GET("/usuarios", adminCtrl.ShowUsers)
 		adminGroup.POST("/usuarios/:id/role", adminCtrl.UpdateUserRole)
 		adminGroup.POST("/usuarios/:id/eliminar", adminCtrl.DeleteUser)
+		adminGroup.POST("/espacios", adminCtrl.CreateEspacio)
 	}
 
 	app = r
