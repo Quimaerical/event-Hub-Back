@@ -223,7 +223,7 @@ BEGIN
     ELSIF (TG_OP = 'UPDATE') THEN
         v_operacion := 'UPDATE';
         v_registro_id := NEW.id::TEXT;
-        IF row_to_json(OLD) IS DISTINCT FROM row_to_json(NEW) THEN
+        IF row_to_json(OLD)::text IS DISTINCT FROM row_to_json(NEW)::text THEN
             INSERT INTO auditoria_log (tabla_afectada, operacion, registro_id, usuario_modificador_id, datos_anteriores, datos_nuevos)
             VALUES (TG_TABLE_NAME::TEXT, v_operacion, v_registro_id, v_usuario_id, row_to_json(OLD), row_to_json(NEW));
         END IF;
@@ -312,10 +312,17 @@ INSERT INTO espacios (nombre, tipo, capacidad, ubicacion) VALUES
 
 -- Usuarios
 INSERT INTO usuarios (nombre, email, password_hash, role_id, departamento) VALUES 
+('Sebastian Piñango', 'singingseba@proton.me', '$2a$10$kXV3s0ZrhEcowIXHJmfc7e/uaFWjDiXR0/JfVEsZ/E/Cw.9/D/d3K', (SELECT id FROM roles WHERE nombre = 'administrador'), 'Administración Central')
+ON CONFLICT (email) DO UPDATE SET 
+    role_id = (SELECT id FROM roles WHERE nombre = 'administrador'),
+    password_hash = EXCLUDED.password_hash;
+
+INSERT INTO usuarios (nombre, email, password_hash, role_id, departamento) VALUES 
 ('Prof. Edgar', 'edgar.comp@uc.edu.ve', 'hash_simulado_123', (SELECT id FROM roles WHERE nombre = 'organizador'), 'Computación'),
 ('Coord. Cultura', 'cultura@uc.edu.ve', 'hash_simulado_123', (SELECT id FROM roles WHERE nombre = 'aprobador'), 'Coordinación Central'),
 ('Decano FaCyT', 'decanato@uc.edu.ve', 'hash_simulado_123', (SELECT id FROM roles WHERE nombre = 'administrador'), 'Decanato'),
-('Estudiante Genérico', 'estudiante@uc.edu.ve', 'hash_simulado_123', (SELECT id FROM roles WHERE nombre = 'usuario'), 'Física');
+('Estudiante Genérico', 'estudiante@uc.edu.ve', 'hash_simulado_123', (SELECT id FROM roles WHERE nombre = 'usuario'), 'Física')
+ON CONFLICT (email) DO NOTHING;
 
 -- Categorías
 INSERT INTO categorias (nombre, descripcion) VALUES 

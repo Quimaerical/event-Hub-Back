@@ -57,11 +57,18 @@ func (ctrl *DashboardController) ShowDashboard(c *gin.Context) {
 	}
 
 	var isAdminOrApprover bool
-	if rVal, exists := c.Get("role_id"); exists {
-		if roleID, ok := rVal.(int); ok {
-			if roleID == 1 || roleID == 2 {
-				isAdminOrApprover = true
-			}
+	var roleID int
+	if rVal, exists := c.Get("roleID"); exists {
+		switch r := rVal.(type) {
+		case int:
+			roleID = r
+		case int64:
+			roleID = int(r)
+		case float64:
+			roleID = int(r)
+		}
+		if roleID == 1 || roleID == 2 {
+			isAdminOrApprover = true
 		}
 	}
 
@@ -115,6 +122,7 @@ func (ctrl *DashboardController) ShowDashboard(c *gin.Context) {
 			"selectedCategoryID": categoryID,
 			"userID":             userID,
 			"email":              email,
+			"roleID":             roleID,
 			"page":               page,
 			"limit":              limit,
 			"totalCount":         totalCount,
@@ -131,6 +139,7 @@ func (ctrl *DashboardController) ShowDashboard(c *gin.Context) {
 		"selectedCategoryID": categoryID,
 		"userID":             userID,
 		"email":              email,
+		"roleID":             roleID,
 		"page":               page,
 		"limit":              limit,
 		"totalCount":         totalCount,

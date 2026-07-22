@@ -60,6 +60,12 @@
                     </div>
                 </div>
 
+                {{ if .evento.ImagenURL.Valid }}
+                    <div class="w-full overflow-hidden rounded-2xl border border-white/10 shadow-lg mt-4">
+                        <img src="{{ .evento.ImagenURL.String }}" alt="{{ .evento.Titulo }}" class="w-full h-72 sm:h-96 object-cover">
+                    </div>
+                {{ end }}
+
                 <!-- Event Title -->
                 <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
                     {{ .evento.Titulo }}
@@ -137,10 +143,14 @@
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                    <!-- Asistencia / Inscripción -->
                     {{ if .userID }}
                         {{ if .estaInscrito }}
+                            <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text={{ .evento.Titulo }}&dates={{ .evento.FechaInicio.Format "20060102T150405Z" }}/{{ .evento.FechaFin.Format "20060102T150405Z" }}&details={{ .evento.Descripcion.String }}&location={{ .evento.EspacioNombre }}" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto px-5 py-2.5 text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-600/20 transition transform hover:-translate-y-0.5 inline-flex items-center space-x-2">
+                                <span>📅 Agregar a mi Google Calendar</span>
+                            </a>
                             <form action="/eventos/{{ .evento.ID }}/cancelar-inscripcion" method="POST">
-                                <button type="submit" onclick="return confirm('¿Seguro que deseas cancelar tu asistencia?')" class="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 rounded-xl transition">
+                                <button type="submit" class="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 rounded-xl transition">
                                     Cancelar Asistencia
                                 </button>
                             </form>
@@ -157,43 +167,125 @@
                         </a>
                     {{ end }}
 
-                    <!-- Edit / Cancel Buttons for Creator / Admin -->
+                    <!-- Botones de Edición / Eliminación para Creador / Admin / Aprobador -->
                     {{ if or .esCreador .esAdminOrApprover }}
                         <a href="/eventos/{{ .evento.ID }}/editar" class="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl transition text-center">
                             ✏️ Editar Evento
                         </a>
+                        <button type="button" onclick="document.getElementById('scaffold-delete-event').classList.toggle('hidden')" class="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 rounded-xl transition text-center">
+                            🗑️ Eliminar Evento
+                        </button>
                     {{ end }}
                 </div>
             </div>
 
-            <!-- Admin Approval Bar -->
+            <!-- Scaffold de Confirmación de Eliminación de Evento -->
+            {{ if or .esCreador .esAdminOrApprover }}
+                <div id="scaffold-delete-event" class="hidden p-6 bg-rose-950/40 border border-rose-500/40 rounded-2xl space-y-4 animate-fade-in-up">
+                    <div class="flex items-start space-x-3 text-rose-200">
+                        <span class="p-2 bg-rose-500/20 rounded-xl text-lg shrink-0">⚠️</span>
+                        <div class="space-y-1">
+                            <span class="font-bold block text-white text-base">¿Confirmar eliminación permanente del evento?</span>
+                            <p class="text-xs text-rose-300/80">Esta acción borrará este evento, sus categorías vinculadas y todas las inscripciones asociadas de forma irreversible.</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-3 justify-end pt-2 border-t border-rose-500/20">
+                        <button type="button" onclick="document.getElementById('scaffold-delete-event').classList.add('hidden')" class="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition">
+                            Cancelar
+                        </button>
+                        <form action="/eventos/{{ .evento.ID }}/eliminar" method="POST" class="inline">
+                            <button type="submit" class="px-5 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow-lg shadow-rose-600/30 transition">
+                                Sí, Eliminar Definitivamente
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {{ end }}
+
+            <!-- Scaffold de Revisión / Aprobación por Administración -->
             {{ if and .esAdminOrApprover (eq .evento.Estado "solicitado") }}
-                <div class="p-6 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-4">
+                <div class="p-6 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-4 animate-fade-in-up">
                     <div class="flex items-center space-x-3 text-amber-300">
-                        <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                        <span class="p-2 bg-amber-500/20 rounded-xl text-lg shrink-0">🛡️</span>
                         <div class="text-sm">
-                            <span class="font-bold block">Acción de Administración</span>
-                            <span>Este evento requiere tu aprobación antes de ser publicado en la cartelera general.</span>
+                            <span class="font-bold block text-white">Panel de Revisión de Administración</span>
+                            <span class="text-xs text-slate-300">Este evento está en estado <strong class="text-amber-400">Solicitado</strong>. Selecciona una acción para actualizar su estado.</span>
                         </div>
                     </div>
 
                     <div class="flex flex-wrap gap-3 pt-2">
                         <form action="/eventos/{{ .evento.ID }}/aprobar" method="POST" class="inline">
-                            <button type="submit" onclick="return confirm('¿Aprobar y publicar este evento?')" class="px-5 py-2.5 text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow transition">
+                            <button type="submit" class="px-5 py-2.5 text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-lg shadow-emerald-600/20 transition transform hover:-translate-y-0.5">
                                 ✅ Aprobar Evento
                             </button>
                         </form>
 
                         <form action="/eventos/{{ .evento.ID }}/rechazar" method="POST" class="inline">
-                            <button type="submit" onclick="return confirm('¿Rechazar este evento?')" class="px-5 py-2.5 text-sm font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow transition">
+                            <button type="submit" class="px-5 py-2.5 text-sm font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-xl shadow-lg shadow-rose-600/20 transition transform hover:-translate-y-0.5">
                                 ❌ Rechazar Evento
                             </button>
                         </form>
                     </div>
                 </div>
             {{ end }}
+
+            <!-- Seccion de Usuarios Inscritos / Asistentes (Pública: Nombres para todos, detalles sensibles para Organizadores/Admins) -->
+            <div class="glass-card rounded-2xl p-6 border border-white/10 space-y-4 animate-fade-in-up mt-8">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center space-x-3">
+                        <span class="p-2 bg-brand-500/20 text-brand-300 rounded-xl text-lg">👥</span>
+                        <div>
+                            <h3 class="text-lg font-bold text-white">Usuarios Inscritos</h3>
+                            <p class="text-xs text-slate-400">
+                                {{ if .puedeVerDetallesSensibles }}
+                                    Detalles completos visibles por ser organizador/administrador
+                                {{ else }}
+                                    Lista pública de participantes confirmados
+                                {{ end }}
+                            </p>
+                        </div>
+                    </div>
+                    <span class="px-3.5 py-1.5 text-xs font-bold bg-brand-500/20 border border-brand-500/30 text-brand-300 rounded-full">
+                        {{ len .asistentes }} / {{ .evento.CapacidadMaxima }} Inscritos
+                    </span>
+                </div>
+
+                {{ if .asistentes }}
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-300 border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[11px]">
+                                    <th class="py-3 px-3">#</th>
+                                    <th class="py-3 px-3">Nombre</th>
+                                    {{ if .puedeVerDetallesSensibles }}
+                                        <th class="py-3 px-3">Correo Electrónico</th>
+                                        <th class="py-3 px-3">Departamento</th>
+                                    {{ end }}
+                                    <th class="py-3 px-3">Fecha de Inscripción</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60">
+                                {{ $sensible := .puedeVerDetallesSensibles }}
+                                {{ range $index, $a := .asistentes }}
+                                    <tr class="hover:bg-slate-900/40 transition">
+                                        <td class="py-3 px-3 font-semibold text-brand-400">{{ add $index 1 }}</td>
+                                        <td class="py-3 px-3 font-medium text-white">{{ $a.Nombre }}</td>
+                                        {{ if $sensible }}
+                                            <td class="py-3 px-3 text-slate-300">{{ $a.Email }}</td>
+                                            <td class="py-3 px-3 text-slate-400">{{ if $a.Departamento }}{{ $a.Departamento }}{{ else }}-{{ end }}</td>
+                                        {{ end }}
+                                        <td class="py-3 px-3 text-slate-400">{{ $a.FechaReserva.Format "02/01/2006 03:04 PM" }}</td>
+                                    </tr>
+                                {{ end }}
+                            </tbody>
+                        </table>
+                    </div>
+                {{ else }}
+                    <div class="text-center py-6 bg-slate-900/40 rounded-xl border border-slate-800 text-slate-400 text-sm">
+                        ℹ️ Aún no hay usuarios inscritos en este evento. ¡Sé el primero en inscribirte!
+                    </div>
+                {{ end }}
+            </div>
         </article>
     {{ end }}
 </div>

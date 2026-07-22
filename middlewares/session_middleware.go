@@ -126,3 +126,35 @@ func handleUnauthorized(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Debe iniciar sesión para acceder a este recurso"})
 	}
 }
+
+// AdminRequired verifies that the logged in user has administrator privileges (roleID == 1).
+func AdminRequired() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		roleIDVal, exists := c.Get("roleID")
+		if !exists {
+			handleUnauthorized(c)
+			c.Abort()
+			return
+		}
+
+		var roleID int
+		switch v := roleIDVal.(type) {
+		case int:
+			roleID = v
+		case int64:
+			roleID = int(v)
+		case float64:
+			roleID = int(v)
+		}
+
+		if roleID != 1 {
+			c.HTML(http.StatusForbidden, "auth/login.html", gin.H{
+				"error": "Acceso restringido. Se requieren privilegios de Administrador.",
+			})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}

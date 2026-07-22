@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"math/rand"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -131,10 +134,11 @@ func (ctrl *EventController) ShowCreate(c *gin.Context) {
 
 	userID, _ := c.Get("userID")
 	email, _ := c.Get("email")
+	roleID, _ := c.Get("roleID")
 
 	responderDual(c, http.StatusOK, "events/create.html",
-		gin.H{"categorias": categories, "espacios": espacios, "userID": userID, "email": email},
-		gin.H{"categorias": categories, "espacios": espacios, "userID": userID, "email": email},
+		gin.H{"categorias": categories, "espacios": espacios, "userID": userID, "email": email, "roleID": roleID},
+		gin.H{"categorias": categories, "espacios": espacios, "userID": userID, "email": email, "roleID": roleID},
 	)
 }
 
@@ -222,6 +226,21 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 		return
 	}
 
+	// Procesar imagen cargada desde el dispositivo
+	var imagenURL string
+	file, errFile := c.FormFile("imagen")
+	if errFile == nil && file != nil {
+		ext := strings.ToLower(filepath.Ext(file.Filename))
+		if ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp" || ext == ".gif" {
+			_ = os.MkdirAll("uploads", 0755)
+			filename := fmt.Sprintf("event_%d_%d%s", time.Now().UnixNano(), rand.Intn(1000), ext)
+			dst := filepath.Join("uploads", filename)
+			if errSave := c.SaveUploadedFile(file, dst); errSave == nil {
+				imagenURL = "/uploads/" + filename
+			}
+		}
+	}
+
 	evento := models.Evento{
 		Titulo:          form.Titulo,
 		Descripcion:     pgtype.Text{String: form.Descripcion, Valid: form.Descripcion != ""},
@@ -230,6 +249,7 @@ func (ctrl *EventController) HandleCreate(c *gin.Context) {
 		FechaInicio:     fechaInicio,
 		FechaFin:        fechaFin,
 		CapacidadMaxima: form.CapacidadMaxima,
+		ImagenURL:       pgtype.Text{String: imagenURL, Valid: imagenURL != ""},
 	}
 
 	err = models.CreateEvento(ctx, &evento, form.Categorias)
@@ -347,14 +367,17 @@ func (ctrl *EventController) HandleGetEvent(c *gin.Context) {
 	// Comprobar estado de autenticación y rol del usuario
 	var userID int64
 	var roleID int
-	if uVal, exists := c.Get("userID"); exists {
-		if id, ok := uVal.(int64); ok {
-			userID = id
-		}
+	if uID, err := extractUserID(c); err == nil {
+		userID = uID
 	}
-	if rVal, exists := c.Get("role_id"); exists {
-		if r, ok := rVal.(int); ok {
+	if rVal, exists := c.Get("roleID"); exists {
+		switch r := rVal.(type) {
+		case int:
 			roleID = r
+		case int64:
+			roleID = int(r)
+		case float64:
+			roleID = int(r)
 		}
 	}
 
@@ -375,21 +398,104 @@ func (ctrl *EventController) HandleGetEvent(c *gin.Context) {
 		estaInscrito, _ = models.EstaInscrito(ctx, eventoID, userID)
 	}
 
+	// Obtener lista de asistentes para todos los usuarios
+	asistentesRaw, _ := models.GetAsistentesPorEvento(ctx, eventoID)
+	
+	// Si NO es el creador ni admin/aprobador, ocultamos correos y teléfonos por privacidad
+	puedeVerDetallesSensibles := esCreador || esAdminOrApprover
+	var asistentes []models.AsistenteInfo
+	if puedeVerDetallesSensibles {
+		asistentes = asistentesRaw
+	} else {
+		asistentes = make([]models.AsistenteInfo, len(asistentesRaw))
+		for i, a := range asistentesRaw {
+			asistentes[i] = models.AsistenteInfo{
+				UsuarioID:    a.UsuarioID,
+				Nombre:       a.Nombre,
+				FechaReserva: a.FechaReserva,
+			}
+		}
+	}
+
 	email, _ := c.Get("email")
 
 	data := gin.H{
-		"evento":            evento,
-		"categorias":        categorias,
-		"conteoInscritos":   conteoInscritos,
-		"cuposDisponibles":  cuposDisponibles,
-		"estaInscrito":      estaInscrito,
-		"esCreador":         esCreador,
-		"esAdminOrApprover": esAdminOrApprover,
-		"userID":            userID,
-		"email":             email,
+		"evento":                    evento,
+		"categorias":                categorias,
+		"conteoInscritos":           conteoInscritos,
+		"cuposDisponibles":          cuposDisponibles,
+		"estaInscrito":              estaInscrito,
+		"esCreador":                 esCreador,
+		"esAdminOrApprover":         esAdminOrApprover,
+		"puedeVerDetallesSensibles": puedeVerDetallesSensibles,
+		"asistentes":                asistentes,
+		"userID":                    userID,
+		"email":                     email,
+		"roleID":                    roleID,
 	}
 
 	responderDual(c, http.StatusOK, "events/detail.html", data, data)
+}
+
+// HandleGetAsistentes devuelve un JSON con la lista de usuarios inscritos (nombres para todos, datos completos para creador/admin)
+func (ctrl *EventController) HandleGetAsistentes(c *gin.Context) {
+	eventoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusBadRequest, "ID de evento inválido")
+		return
+	}
+
+	userID, _ := extractUserID(c)
+	ctx := c.Request.Context()
+	evento, err := models.GetEventoByID(ctx, eventoID)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusNotFound, "Evento no encontrado")
+		return
+	}
+
+	roleIDVal, _ := c.Get("roleID")
+	var roleID int
+	if roleIDVal != nil {
+		switch r := roleIDVal.(type) {
+		case int:
+			roleID = r
+		case int64:
+			roleID = int(r)
+		case float64:
+			roleID = int(r)
+		}
+	}
+
+	esCreador := userID > 0 && evento.OrganizadorID == userID
+	esAdminOrApprover := roleID == 1 || roleID == 2 || roleID == 3
+	puedeVerDetallesSensibles := esCreador || esAdminOrApprover
+
+	asistentesRaw, err := models.GetAsistentesPorEvento(ctx, eventoID)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusInternalServerError, "Error al cargar la lista de asistentes")
+		return
+	}
+
+	var asistentes []models.AsistenteInfo
+	if puedeVerDetallesSensibles {
+		asistentes = asistentesRaw
+	} else {
+		asistentes = make([]models.AsistenteInfo, len(asistentesRaw))
+		for i, a := range asistentesRaw {
+			asistentes[i] = models.AsistenteInfo{
+				UsuarioID:    a.UsuarioID,
+				Nombre:       a.Nombre,
+				FechaReserva: a.FechaReserva,
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"evento_id":                  eventoID,
+		"asistentes":                 asistentes,
+		"total":                      len(asistentes),
+		"puedeVerDetallesSensibles":  puedeVerDetallesSensibles,
+	})
 }
 
 func (ctrl *EventController) HandleInscribirEvent(c *gin.Context) {
@@ -421,6 +527,26 @@ func (ctrl *EventController) HandleInscribirEvent(c *gin.Context) {
 	}
 
 	slog.Info("Inscripción exitosa", "evento_id", eventoID, "user_id", userID)
+
+	// Disparar envío automático de invitación a Google Calendar del usuario mediante Apps Script
+	if ctrl.calendarService != nil && emailStr != "" {
+		go func(eID int64, targetEmail string) {
+			bgCtx, bgCancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer bgCancel()
+			eventoObj, errEv := models.GetEventoByID(bgCtx, eID)
+			if errEv == nil && eventoObj != nil {
+				_ = ctrl.calendarService.SendAppsScriptNotification(
+					bgCtx,
+					eventoObj.Titulo,
+					eventoObj.FechaInicio,
+					eventoObj.FechaFin,
+					eventoObj.Descripcion.String,
+					[]string{targetEmail},
+				)
+			}
+		}(eventoID, emailStr)
+	}
+
 	if strings.Contains(c.GetHeader("Accept"), "application/json") {
 		c.JSON(http.StatusOK, gin.H{"message": "Inscripción confirmada"})
 		return
@@ -661,6 +787,20 @@ func (ctrl *EventController) HandleEdit(c *gin.Context) {
 	eventoOriginal.FechaFin = fechaFin
 	eventoOriginal.CapacidadMaxima = form.CapacidadMaxima
 
+	// Procesar nueva imagen cargada desde el dispositivo (opcional)
+	file, errFile := c.FormFile("imagen")
+	if errFile == nil && file != nil {
+		ext := strings.ToLower(filepath.Ext(file.Filename))
+		if ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp" || ext == ".gif" {
+			_ = os.MkdirAll("uploads", 0755)
+			filename := fmt.Sprintf("event_%d_%d%s", time.Now().UnixNano(), rand.Intn(1000), ext)
+			dst := filepath.Join("uploads", filename)
+			if errSave := c.SaveUploadedFile(file, dst); errSave == nil {
+				eventoOriginal.ImagenURL = pgtype.Text{String: "/uploads/" + filename, Valid: true}
+			}
+		}
+	}
+
 	err = models.UpdateEvento(ctx, eventoOriginal, form.Categorias)
 	if err != nil {
 		slog.Error("Error al actualizar evento", "evento_id", eventoID, "error", err)
@@ -840,6 +980,58 @@ func (ctrl *EventController) HandleCancelEvent(c *gin.Context) {
 		return
 	}
 	c.Redirect(http.StatusSeeOther, "/eventos/")
+}
+
+func (ctrl *EventController) HandleDeleteEvent(c *gin.Context) {
+	eventoID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusBadRequest, "ID de evento inválido")
+		return
+	}
+	ctx := c.Request.Context()
+	evento, err := models.GetEventoByID(ctx, eventoID)
+	if err != nil {
+		manejarErrorAPI(c, http.StatusNotFound, "Evento no encontrado")
+		return
+	}
+
+	userID, _ := extractUserID(c)
+	roleIDVal, _ := c.Get("roleID")
+	var roleID int
+	if r, ok := roleIDVal.(int); ok {
+		roleID = r
+	} else if r64, ok := roleIDVal.(int64); ok {
+		roleID = int(r64)
+	} else if rf, ok := roleIDVal.(float64); ok {
+		roleID = int(rf)
+	}
+
+	esCreador := userID > 0 && evento.OrganizadorID == userID
+	esAdminOrApprover := roleID == 1 || roleID == 2
+
+	if !esCreador && !esAdminOrApprover {
+		slog.Warn("Acceso denegado para eliminación de evento", "evento_id", eventoID, "user_id", userID)
+		responderDual(c, http.StatusForbidden, "events/detail.html",
+			gin.H{"error": "No tienes permisos para eliminar este evento"},
+			gin.H{"error": "No tienes permisos para eliminar este evento"})
+		return
+	}
+
+	err = models.DeleteEvento(ctx, eventoID)
+	if err != nil {
+		slog.Error("Error al eliminar evento", "evento_id", eventoID, "error", err)
+		responderDual(c, http.StatusInternalServerError, "events/detail.html",
+			gin.H{"error": "Error al eliminar evento: " + err.Error()},
+			gin.H{"error": "Error al eliminar evento: " + err.Error()})
+		return
+	}
+
+	slog.Info("Evento eliminado permanentemente", "evento_id", eventoID, "por_user_id", userID)
+	if strings.Contains(c.GetHeader("Accept"), "application/json") {
+		c.JSON(http.StatusOK, gin.H{"mensaje": "Evento eliminado exitosamente"})
+		return
+	}
+	c.Redirect(http.StatusSeeOther, "/")
 }
 
 // ==========================================

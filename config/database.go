@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -46,6 +47,7 @@ func ConnectDB() *pgxpool.Pool {
 		}
 
 		// Optimizaciones para Vercel Serverless & Neon PostgreSQL
+		config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 		config.MaxConns = 10
 		config.MinConns = 0 // CRÍTICO EN SERVERLESS: Debe ser 0 para evitar bloqueos en el arranque del contenedor
 		config.MaxConnIdleTime = 5 * time.Minute
@@ -119,7 +121,11 @@ func ForceMigrate(ctx context.Context) error {
 	}
 	log.Println("Ejecutando migración forzada de schema.sql en Neon PostgreSQL...")
 	_, err := DB.Exec(ctx, schemaSQL)
-	return err
+	if err != nil {
+		return err
+	}
+	DB.Reset()
+	return nil
 }
 
 // CloseDB closes the database connection pool.

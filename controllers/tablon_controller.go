@@ -38,7 +38,18 @@ func (ctrl *TablonController) ShowTablon(c *gin.Context) {
 		eventosCreados = []models.Evento{}
 	}
 
-	email, _ := c.Get("user_email")
+	email, _ := c.Get("email")
+	var roleID int
+	if rVal, exists := c.Get("roleID"); exists {
+		switch r := rVal.(type) {
+		case int:
+			roleID = r
+		case int64:
+			roleID = int(r)
+		case float64:
+			roleID = int(r)
+		}
+	}
 
 	responderDual(c, http.StatusOK, "tablon/index.html",
 		gin.H{
@@ -50,6 +61,7 @@ func (ctrl *TablonController) ShowTablon(c *gin.Context) {
 			"eventos_creados":  eventosCreados,
 			"userID":           userID,
 			"email":            email,
+			"roleID":           roleID,
 			"activeTab":        c.DefaultQuery("tab", "asistire"),
 		},
 	)

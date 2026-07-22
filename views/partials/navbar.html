@@ -9,30 +9,95 @@
                 </a>
             </div>
 
-            <!-- Center Nav Links -->
-            <nav class="hidden md:flex space-x-8 text-sm font-medium">
-                <a href="/" class="text-slate-200 hover:text-white transition">Cartelera</a>
+            <!-- Center Nav Links (Desktop) -->
+            <nav id="main-nav" class="hidden md:flex space-x-6 items-center text-sm font-medium">
+                <a href="/" data-nav="cartelera" class="text-slate-300 hover:text-white transition">Cartelera</a>
                 {{ if .userID }}
-                    <a href="/tablon" class="text-slate-400 hover:text-white transition">Mi Tablón</a>
-                    <a href="/eventos/crear" class="text-slate-400 hover:text-white transition">Crear Evento</a>
-                    <a href="/perfil" class="text-slate-400 hover:text-white transition">Mi Perfil</a>
+                    <a href="/tablon" data-nav="tablon" class="text-slate-400 hover:text-white transition">Mi Tablón</a>
+                    <a href="/eventos/crear" data-nav="crear" class="text-slate-400 hover:text-white transition">Crear Evento</a>
+                    <a href="/perfil" data-nav="perfil" class="text-slate-400 hover:text-white transition">Mi Perfil</a>
+                    {{ if eq .roleID 1 }}
+                        <a href="/admin/usuarios" data-nav="admin" class="text-amber-400 font-semibold hover:text-amber-300 transition">🛡️ Admin</a>
+                    {{ end }}
                 {{ end }}
             </nav>
 
-            <!-- Right Actions -->
-            <div class="flex items-center space-x-4">
+            <!-- Right Actions & Mobile Buttons -->
+            <div class="flex items-center space-x-2 sm:space-x-3">
                 {{ if .userID }}
+                    {{ if eq .roleID 1 }}
+                        <!-- Botón Admin visible directamente en móviles -->
+                        <a href="/admin/usuarios" data-nav="admin-mobile" class="md:hidden px-2.5 py-1 text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg transition inline-flex items-center">
+                            🛡️ Admin
+                        </a>
+                    {{ end }}
+
                     <a href="/perfil" class="flex items-center space-x-2 text-slate-300 hover:text-white text-sm font-medium transition">
                         <span class="text-slate-400 text-sm hidden sm:inline">Hola, <span class="text-brand-100 font-medium">{{ .email }}</span></span>
                     </a>
-                    <a href="/perfil" class="px-3 py-1.5 text-xs font-semibold bg-brand-500/10 hover:bg-brand-500/20 text-brand-300 border border-brand-500/20 rounded-lg transition">Mi Perfil</a>
-                    <a href="/auth/logout" class="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition border border-slate-700">Salir</a>
+                    <a href="/perfil" class="px-2.5 sm:px-3 py-1.5 text-xs font-semibold bg-brand-500/10 hover:bg-brand-500/20 text-brand-300 border border-brand-500/20 rounded-lg transition">Mi Perfil</a>
+                    <a href="/auth/logout" class="px-3 sm:px-4 py-1.5 sm:py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition border border-slate-700">Salir</a>
                 {{ else }}
                     <a href="/login" class="text-slate-300 hover:text-white text-sm font-medium transition">Ingresar</a>
-                    <a href="/register" class="px-4 py-2 text-xs font-semibold bg-brand-600 hover:bg-brand-500 text-white rounded-lg transition shadow-md shadow-brand-500/10">Registrarse</a>
+                    <a href="/register" class="px-3.5 py-2 text-xs font-semibold bg-brand-600 hover:bg-brand-500 text-white rounded-lg transition shadow-md shadow-brand-500/10">Registrarse</a>
                 {{ end }}
+
+                <!-- Botón Menú Hamburguesa (Móvil) -->
+                <button id="mobile-menu-btn" type="button" aria-label="Abrir menú" class="md:hidden p-2 text-slate-400 hover:text-white focus:outline-none rounded-lg bg-slate-900/60 border border-slate-800">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
             </div>
         </div>
     </div>
+
+    <!-- Menú Desplegable Móvil -->
+    <div id="mobile-menu" class="hidden md:hidden border-t border-slate-900 bg-slate-950/95 backdrop-blur-xl px-4 pt-3 pb-4 space-y-2 animate-fade-in-up">
+        <a href="/" data-nav="cartelera-m" class="block px-3 py-2 text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-900 rounded-xl transition">Cartelera</a>
+        {{ if .userID }}
+            <a href="/tablon" data-nav="tablon-m" class="block px-3 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-900 rounded-xl transition">Mi Tablón</a>
+            <a href="/eventos/crear" data-nav="crear-m" class="block px-3 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-900 rounded-xl transition">Crear Evento</a>
+            <a href="/perfil" data-nav="perfil-m" class="block px-3 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-900 rounded-xl transition">Mi Perfil</a>
+            {{ if eq .roleID 1 }}
+                <a href="/admin/usuarios" data-nav="admin-m" class="block px-3 py-2 text-sm font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl transition">🛡️ Admin Panel</a>
+            {{ end }}
+        {{ end }}
+    </div>
 </header>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const currentPath = window.location.pathname;
+        const links = document.querySelectorAll('#main-nav a, #mobile-menu a');
+        
+        links.forEach(link => {
+            const href = link.getAttribute('href');
+            let isActive = false;
+            
+            if (href === '/' && currentPath === '/') {
+                isActive = true;
+            } else if (href !== '/' && (currentPath === href || currentPath.startsWith(href))) {
+                isActive = true;
+            }
+
+            if (isActive) {
+                if (link.getAttribute('data-nav') && link.getAttribute('data-nav').endsWith('-m')) {
+                    link.className = "block px-3 py-2 text-sm font-bold text-brand-400 bg-brand-500/15 border border-brand-500/30 rounded-xl transition";
+                } else {
+                    link.className = "text-brand-400 font-bold bg-brand-500/15 px-3.5 py-1.5 rounded-xl border border-brand-500/30 shadow-sm shadow-brand-500/20 transition";
+                }
+            }
+        });
+
+        // Lógica de toggle para el menú móvil
+        const menuBtn = document.getElementById('mobile-menu-btn');
+        const menu = document.getElementById('mobile-menu');
+        if (menuBtn && menu) {
+            menuBtn.addEventListener('click', () => {
+                menu.classList.toggle('hidden');
+            });
+        }
+    });
+</script>
 {{ end }}

@@ -40,3 +40,20 @@ func GetAllEspacios(ctx context.Context) ([]Espacio, error) {
 	}
 	return spaces, nil
 }
+
+// CreateEspacio registra una nueva ubicación/espacio para eventos en la base de datos.
+func CreateEspacio(ctx context.Context, e *Espacio) error {
+	tipoValido := e.Tipo
+	switch tipoValido {
+	case "biblioteca", "auditorio", "salon", "laboratorio":
+	default:
+		tipoValido = "auditorio"
+	}
+
+	query := `
+		INSERT INTO espacios (nombre, tipo, capacidad, ubicacion, disponible, activo)
+		VALUES ($1, $2::tipo_espacio, $3, $4, true, true)
+		RETURNING id
+	`
+	return config.DB.QueryRow(ctx, query, e.Nombre, tipoValido, e.Capacidad, e.Ubicacion).Scan(&e.ID)
+}

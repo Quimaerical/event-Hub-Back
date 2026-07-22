@@ -2,7 +2,9 @@ package controllers
 
 import (
 	"net/http"
+	"strings"
 
+	"event-hub/middlewares"
 	"event-hub/models"
 
 	"github.com/gin-gonic/gin"
@@ -41,6 +43,7 @@ func (ctrl *ProfileController) ShowProfile(c *gin.Context) {
 	c.HTML(http.StatusOK, "perfil/index.html", gin.H{
 		"userID":       userID,
 		"email":        user.Email,
+		"roleID":       user.RoleID,
 		"user":         user,
 		"roleName":     roleName,
 		"departamento": user.Departamento.String,
@@ -194,4 +197,53 @@ func (ctrl *ProfileController) UpdatePassword(c *gin.Context) {
 		"telefono":        user.Telefono.String,
 		"passwordSuccess": "¡Contraseña actualizada con éxito!",
 	})
+}
+
+// DeleteAccount handles self-service user account deletion with double verification.
+func (ctrl *ProfileController) DeleteAccount(c *gin.Context) {
+	userIDVal, exists := c.Get("userID")
+	if !exists {
+		c.Redirect(http.StatusSeeOther, "/login")
+		return
+	}
+	userID := userIDVal.(int)
+
+	confirmacion := strings.TrimSpace(c.PostForm("confirmacion"))
+	ctx := c.Request.Context()
+	user, _ := models.GetUsuarioByID(ctx, userID)
+	roleName := "usuario"
+	if user != nil {
+		if r, err := models.GetRoleByID(ctx, user.RoleID); err == nil {
+			roleName = r.Nombre
+		}
+	}
+
+	if confirmacion != "ELIMINAR" {
+		c.HTML(http.StatusBadRequest, "perfil/index.html", gin.H{
+			"userID":       userID,
+			"email":        user.Email,
+			"user":         user,
+			"roleName":     roleName,
+			"departamento": user.Departamento.String,
+			"telefono":     user.Telefono.String,
+			"deleteError":  "Debes escribir exactamente la palabra ELIMINAR en mayúsculas para confirmar.",
+		})
+		return
+	}
+
+	if err := models.DeleteUsuario(ctx, userID); err != nil {
+		c.HTML(http.StatusInternalServerError, "perfil/index.html", gin.H{
+			"userID":       userID,
+			"email":        user.Email,
+			"user":         user,
+			"roleName":     roleName,
+			"departamento": user.Departamento.String,
+			"telefono":     user.Telefono.String,
+			"deleteError":  "Error al eliminar la cuenta: " + err.Error(),
+		})
+		return
+	}
+
+	middlewares.ClearSessionCookie(c)
+	c.Redirect(http.StatusSeeOther, "/")
 }

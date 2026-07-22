@@ -81,7 +81,9 @@ func loadTemplates(r *gin.Engine) {
 			isLayoutOrPartial := strings.Contains(cleanPath, "layouts/") || strings.Contains(cleanPath, "partials/")
 
 			if !isLayoutOrPartial {
-				tmpl := template.New(cleanPath)
+				tmpl := template.New(cleanPath).Funcs(template.FuncMap{
+					"add": func(a, b int) int { return a + b },
+				})
 				content, errRead := views.FS.ReadFile(cleanPath)
 				if errRead != nil {
 					log.Printf("Error leyendo plantilla embebida %s: %v", cleanPath, errRead)
@@ -206,6 +208,9 @@ func initApp() {
 		})
 	})
 
+	_ = os.MkdirAll("uploads", 0755)
+	r.Static("/uploads", "./uploads")
+
 	r.GET("/", middlewares.CurrentUser(), dashboardCtrl.ShowDashboard)
 	r.GET("/eventos/:id", middlewares.CurrentUser(), eventCtrl.HandleGetEvent)
 	r.GET("/login", authCtrl.ShowLogin)
@@ -227,6 +232,7 @@ func initApp() {
 		perfilProtegido.GET("", profileCtrl.ShowProfile)
 		perfilProtegido.POST("", profileCtrl.UpdateProfile)
 		perfilProtegido.POST("/password", profileCtrl.UpdatePassword)
+		perfilProtegido.POST("/eliminar", profileCtrl.DeleteAccount)
 		perfilProtegido.POST("/fcm-token", authCtrl.HandleUpdateFCMToken)
 	}
 
@@ -237,6 +243,7 @@ func initApp() {
 		protected.POST("/crear", eventCtrl.HandleCreate)
 		protected.POST("/sugerir-descripcion", eventCtrl.SuggestDescription)
 		protected.GET("/", eventCtrl.HandleListEvents)
+		protected.GET("/:id/asistentes", eventCtrl.HandleGetAsistentes)
 		protected.POST("/:id/inscribir", eventCtrl.HandleInscribirEvent)
 		protected.POST("/:id/cancelar-inscripcion", eventCtrl.HandleCancelarInscripcion)
 		protected.GET("/:id/editar", eventCtrl.ShowEdit)
@@ -244,7 +251,18 @@ func initApp() {
 		protected.POST("/:id/aprobar", eventCtrl.HandleAprobarEvent)
 		protected.POST("/:id/rechazar", eventCtrl.HandleRechazarEvent)
 		protected.PATCH("/:id/estado", eventCtrl.HandleActualizarEstado)
-		protected.DELETE("/:id", eventCtrl.HandleCancelEvent)
+		protected.POST("/:id/eliminar", eventCtrl.HandleDeleteEvent)
+		protected.DELETE("/:id", eventCtrl.HandleDeleteEvent)
+	}
+
+	adminCtrl := controllers.NewAdminController()
+	adminGroup := r.Group("/admin")
+	adminGroup.Use(middlewares.AuthRequired(), middlewares.AdminRequired())
+	{
+		adminGroup.GET("/usuarios", adminCtrl.ShowUsers)
+		adminGroup.POST("/usuarios/:id/role", adminCtrl.UpdateUserRole)
+		adminGroup.POST("/usuarios/:id/eliminar", adminCtrl.DeleteUser)
+		adminGroup.POST("/espacios", adminCtrl.CreateEspacio)
 	}
 
 	app = r

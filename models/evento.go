@@ -105,14 +105,14 @@ func CreateEvento(ctx context.Context, e *Evento, categoryIDs []int) error {
 	query := `
 		INSERT INTO eventos (
 			titulo, descripcion, espacio_id, organizador_id, 
-			fecha_inicio, fecha_fin, capacidad_maxima
+			fecha_inicio, fecha_fin, capacidad_maxima, imagen_url
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, estado, fecha_solicitud, fecha_creacion, fecha_actualizacion
 	`
 	err = tx.QueryRow(ctx, query,
 		e.Titulo, e.Descripcion, e.EspacioID, e.OrganizadorID,
-		e.FechaInicio, e.FechaFin, e.CapacidadMaxima,
+		e.FechaInicio, e.FechaFin, e.CapacidadMaxima, e.ImagenURL,
 	).Scan(
 		&e.ID, &e.Estado, &e.FechaSolicitud, &e.FechaCreacion, &e.FechaActualizacion,
 	)
@@ -222,13 +222,13 @@ func ActualizarEstadoEvento(ctx context.Context, id int64, nuevoEstado string, a
 	}
 
 	transicionesValidas := map[string][]string{
-		EstadoSolicitado: {EstadoEnRevision, EstadoCancelado},
+		EstadoSolicitado: {EstadoAprobado, EstadoRechazado, EstadoEnRevision, EstadoCancelado},
 		EstadoEnRevision: {EstadoAprobado, EstadoRechazado, EstadoCancelado},
 		EstadoAprobado:   {EstadoProgramado, EstadoCancelado},
 		EstadoProgramado: {EstadoRealizado, EstadoCancelado},
 		EstadoRealizado:  {},
 		EstadoCancelado:  {},
-		EstadoRechazado:  {},
+		EstadoRechazado:  {EstadoSolicitado, EstadoAprobado},
 	}
 
 	esValida := false
@@ -437,12 +437,13 @@ func UpdateEvento(ctx context.Context, e *Evento, categoryIDs []int) error {
 		    fecha_inicio = $4,
 		    fecha_fin = $5,
 		    capacidad_maxima = $6,
+		    imagen_url = COALESCE(NULLIF($7, ''), imagen_url),
 		    fecha_actualizacion = NOW()
-		WHERE id = $7
+		WHERE id = $8
 	`
 	_, err = tx.Exec(ctx, query,
 		e.Titulo, e.Descripcion, e.EspacioID,
-		e.FechaInicio, e.FechaFin, e.CapacidadMaxima, e.ID,
+		e.FechaInicio, e.FechaFin, e.CapacidadMaxima, e.ImagenURL.String, e.ID,
 	)
 	if err != nil {
 		return err
@@ -462,4 +463,12 @@ func UpdateEvento(ctx context.Context, e *Evento, categoryIDs []int) error {
 	}
 
 	return tx.Commit(ctx)
+}
+
+// DeleteEvento elimina permanentemente un evento y sus registros vinculados.
+func DeleteEvento(ctx context.Context, id int64) error {
+	_, _ = config.DB.Exec(ctx, `DELETE FROM evento_categorias WHERE evento_id = $1`, id)
+	_, _ = config.DB.Exec(ctx, `DELETE FROM reservas WHERE evento_id = $1`, id)
+	_, err := config.DB.Exec(ctx, `DELETE FROM eventos WHERE id = $1`, id)
+	return err
 }

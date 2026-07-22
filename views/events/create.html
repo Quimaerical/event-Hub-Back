@@ -30,11 +30,16 @@
             </div>
         {{ end }}
 
-        <form action="/eventos/crear" method="POST" class="space-y-6">
+        <form action="/eventos/crear" method="POST" enctype="multipart/form-data" class="space-y-6">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="sm:col-span-2">
                     <label for="titulo" class="block text-sm font-medium text-slate-300">Título del Evento</label>
                     <input type="text" id="titulo" name="titulo" required placeholder="Ej. Taller Práctico de Clean Architecture" class="mt-1 block w-full bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition">
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label for="imagen" class="block text-sm font-medium text-slate-300">Imagen del Evento (Cargar desde dispositivo)</label>
+                    <input type="file" id="imagen" name="imagen" accept="image/*" class="mt-1.5 block w-full text-xs text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-500/20 file:text-brand-300 hover:file:bg-brand-500/30 cursor-pointer bg-slate-900/60 border border-slate-800 rounded-xl transition">
                 </div>
 
                 <div>
